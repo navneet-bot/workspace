@@ -15,7 +15,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Job Jockey — Intern Collaboration Platform",
+  title: "Workspace | JobJockey",
   description: "Manage interns, tasks, and projects efficiently.",
 };
 

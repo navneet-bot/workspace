@@ -1,8 +1,9 @@
 "use client";
 
 import { signIn, getSession } from "next-auth/react";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -11,6 +12,16 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const queryError = searchParams.get("error");
+    if (queryError) {
+      const timer = setTimeout(() => {
+        setError(queryError);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +43,23 @@ function LoginForm() {
       console.log("SignIn Result:", result);
 
       if (result?.error) {
-        console.error("Login Error:", result.error);
-        setError(result.error);
+        if (result.error === "CredentialsSignin" || result.error === "AccessDenied") {
+          console.log("Login failed:", result.error);
+        } else {
+          console.error("Login Error:", result.error);
+        }
+
+        const errorMessages: Record<string, string> = {
+          CredentialsSignin: "Invalid email or password.",
+          AccessDenied: "Access denied.",
+          Configuration: "Authentication service unavailable.",
+        };
+
+        setError(
+          errorMessages[result.error] ??
+          "Unable to sign in. Please try again."
+        );
+
         setIsLoading(false);
         return;
       }
@@ -64,11 +90,7 @@ function LoginForm() {
         <p>Sign in to your account</p>
 
         <form onSubmit={handleLogin}>
-          {error && (
-            <div className="mb-4 rounded-lg bg-jj-red/10 border border-jj-red/20 p-3 text-sm text-jj-red" style={{ position: "relative", zIndex: 5 }}>
-              {error}
-            </div>
-          )}
+          <ErrorAlert error={error} />
 
           <div className="field-group">
             <label>Email Address</label>

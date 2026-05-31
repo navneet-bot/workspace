@@ -170,6 +170,23 @@ h1,h2,h3,h4{font-family:'Syne',sans-serif}
 .btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
 .domain-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px}
 .domain-note span{color:var(--accent)}
+.login-error {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ff6b6b;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 /* ══════════════════════════════════════
    APP LAYOUT
