@@ -1,7 +1,7 @@
 "use client";
 
 import { useUIStore } from "@/hooks/useUIStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { markAttendance } from "@/app/actions/attendance";
 
 interface AttendanceRecord {
@@ -34,6 +34,45 @@ export function AttendanceView({
   const [records, setRecords] = useState<AttendanceRecord[]>(attendance);
   const [internAttDate, setInternAttDate] = useState<Date>(new Date());
   const [leaveDate, setLeaveDate] = useState<string>(new Date().toISOString().split("T")[0]);
+
+  // Admin View States
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [adminCalDate, setAdminCalDate] = useState<Date>(new Date());
+  const [selectedDateRecords, setSelectedDateRecords] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState<boolean>(false);
+
+  const getISODateString = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const selectedDateISO = getISODateString(selectedDate);
+
+  const fetchRecordsForDate = async (d: Date) => {
+    const dateStr = getISODateString(d);
+    setLoadingRecords(true);
+    try {
+      const res = await fetch(`/api/attendance?date=${dateStr}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSelectedDateRecords(data);
+      } else {
+        setSelectedDateRecords([]);
+      }
+    } catch (e) {
+      setSelectedDateRecords([]);
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  useEffect(() => {
+    if (role === "admin" || role === "super_admin") {
+      fetchRecordsForDate(selectedDate);
+    }
+  }, [selectedDate]);
 
   const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#06b6d4"];
 
@@ -68,6 +107,22 @@ export function AttendanceView({
           return [...prev, { id: Math.random(), email, date, status }];
         }
       });
+
+      // Update selectedDateRecords locally if matching the current selectedDate
+      if (date === selectedDateISO) {
+        setSelectedDateRecords((prev) =>
+          prev.map((r) => {
+            if (r.email === email) {
+              return {
+                ...r,
+                status: status.toLowerCase(),
+                checkIn: status.toLowerCase() === "present" ? r.checkIn : "—"
+              };
+            }
+            return r;
+          })
+        );
+      }
     } else {
       addToast(res.error || "Failed to update attendance", "error");
     }
@@ -126,7 +181,99 @@ export function AttendanceView({
   };
 
   if (!isUserIntern) {
-    const members = users.filter((u) => u.role !== "admin" && u.role !== "super_admin");
+    const yr = adminCalDate.getFullYear();
+    const mo = adminCalDate.getMonth();
+    const firstDay = new Date(yr, mo, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+    const monthName = adminCalDate.toLocaleDateString("en-IN", {
+      month: "long",
+      year: "numeric",
+    });
+
+    const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    const handleDateClick = (day: number) => {
+      setSelectedDate(new Date(yr, mo, day));
+    };
+
+    const cells = [];
+    for (let i = 0; i < firstDay; i++) {
+      cells.push(<div key={`empty-${i}`} className="cal-day empty"></div>);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${yr}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const isToday = iso === todayISO;
+      const isSelected = iso === selectedDateISO;
+      
+      // Check if any attendance record exists for this date
+      const hasRecords = records.some((r) => r.date === iso);
+      
+      // Calculate daily counts for indicators/badges
+      const dateRecords = records.filter((r) => r.date === iso);
+      const presentCount = dateRecords.filter((r) => r.status === "Present").length;
+      
+      const dotColor = hasRecords ? "var(--green)" : "var(--red)";
+
+      cells.push(
+        <div
+          key={`day-${d}`}
+          className={`cal-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}`}
+          style={{
+            textAlign: "center",
+            minHeight: "75px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 4px",
+            cursor: "pointer",
+            borderRadius: "10px",
+            border: isSelected 
+              ? "2px solid var(--accent)" 
+              : isToday 
+              ? "1px solid var(--accent-dim)" 
+              : "1px solid var(--border)",
+            background: isSelected
+              ? "rgba(245,158,11,0.06)"
+              : isToday
+              ? "var(--accent-dim)"
+              : "var(--surface2)",
+            boxSizing: "border-box"
+          }}
+          onClick={() => handleDateClick(d)}
+        >
+          <div
+            className="cal-date"
+            style={{
+              fontSize: "12px",
+              fontWeight: (isToday || isSelected) ? 700 : 500,
+              color: isSelected ? "var(--accent)" : "var(--text)"
+            }}
+          >
+            {d}
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+            {hasRecords ? (
+              <span style={{ fontSize: "10px", color: "var(--green)", fontWeight: 600 }}>
+                {presentCount} P
+              </span>
+            ) : (
+              <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>—</span>
+            )}
+            <div
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: dotColor,
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
 
     return (
       <>
@@ -137,65 +284,134 @@ export function AttendanceView({
           <button onClick={exportAttendance} className="btn-sm btn-outline">↓ Export CSV</button>
         </div>
 
-        <div className="attend-grid">
-          {members.map((u, i) => {
-            const rec = records.find((a) => a.email === u.email && a.date === todayISO);
-            const color = COLORS[i % COLORS.length];
-            const status = rec ? rec.status : "Not Marked";
-
-            return (
-              <div key={u.email} className="attend-card">
-                <div
-                  className="attend-avatar"
-                  style={{
-                    backgroundColor: `${color}22`,
-                    color: color,
-                    border: `2px solid ${color}44`,
+        <div style={{ display: "flex", gap: "24px", flexDirection: "row", flexWrap: "wrap" }}>
+          
+          {/* Calendar on the Left */}
+          <div className="chart-card" style={{ flex: "1 1 500px", minWidth: "320px" }}>
+            <div className="cal-controls">
+              <div className="cal-month">{monthName}</div>
+              <div className="cal-nav">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdminCalDate(
+                      new Date(adminCalDate.getFullYear(), adminCalDate.getMonth() - 1, 1)
+                    )
+                  }
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = new Date();
+                    setAdminCalDate(t);
+                    setSelectedDate(t);
                   }}
                 >
-                  {u.name
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")}
-                </div>
-                <div className="attend-info flex flex-col gap-2">
-                  <div className="font-bold text-[15px]">{u.name}</div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {roleBadge(u.role)}
-                    {statusBadge(status)}
-                  </div>
-                  {canManageAttendance && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      <button
-                        className="action-btn action-approve"
-                        style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "6px" }}
-                        onClick={() => handleMark(u.email, "Present", todayISO)}
-                      >
-                        P
-                      </button>
-                      <button
-                        className="action-btn action-reject"
-                        style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "6px" }}
-                        onClick={() => handleMark(u.email, "Absent", todayISO)}
-                      >
-                        A
-                      </button>
-                      <button
-                        className="action-btn action-edit"
-                        style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "6px" }}
-                        onClick={() => handleMark(u.email, "Leave", todayISO)}
-                      >
-                        L
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdminCalDate(
+                      new Date(adminCalDate.getFullYear(), adminCalDate.getMonth() + 1, 1)
+                    )
+                  }
+                >
+                  ›
+                </button>
               </div>
-            );
-          })}
-          {members.length === 0 && (
-            <div className="text-jj-text-muted text-[13px]">No team members</div>
-          )}
+            </div>
+            <div className="cal-grid">
+              {dayHeaders.map((dh) => (
+                <div key={dh} className="cal-day-header">
+                  {dh}
+                </div>
+              ))}
+              {cells}
+            </div>
+          </div>
+
+          {/* Details Table on the Right */}
+          <div className="table-card" style={{ flex: "1 1 400px", minWidth: "320px", display: "flex", flexDirection: "column" }}>
+            <div className="table-card-header" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <h3 style={{ margin: 0, fontSize: "15px", fontFamily: "var(--font-syne)" }}>
+                  📋 Records: {selectedDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+                </h3>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                  {selectedDateRecords.filter(r => r.status === "present").length} Present · {selectedDateRecords.filter(r => r.status === "absent").length} Absent · {selectedDateRecords.filter(r => r.status === "leave").length} Leave
+                </span>
+              </div>
+            </div>
+
+            <div className="table-scroll" style={{ overflowY: "auto", maxHeight: "400px" }}>
+              {loadingRecords ? (
+                <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  Loading records...
+                </div>
+              ) : selectedDateRecords.length === 0 ? (
+                <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  No attendance records found for this date.
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: "12px 16px" }}>Employee</th>
+                      <th style={{ padding: "12px 16px" }}>Status</th>
+                      {canManageAttendance && <th style={{ padding: "12px 16px" }}>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDateRecords.map((rec) => {
+                      const email = rec.email || "";
+                      return (
+                        <tr key={rec.userId}>
+                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>{rec.name}</td>
+                          <td style={{ padding: "12px 16px" }}>
+                            {statusBadge(rec.status === "present" ? "Present" : rec.status === "absent" ? "Absent" : "Leave")}
+                          </td>
+                          {canManageAttendance && (
+                            <td style={{ padding: "8px 16px" }}>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  className="action-btn action-approve"
+                                  style={{ padding: "3px 8px", fontSize: "11px", borderRadius: "4px" }}
+                                  onClick={() => handleMark(email, "Present", selectedDateISO)}
+                                >
+                                  P
+                                </button>
+                                <button
+                                  type="button"
+                                  className="action-btn action-reject"
+                                  style={{ padding: "3px 8px", fontSize: "11px", borderRadius: "4px" }}
+                                  onClick={() => handleMark(email, "Absent", selectedDateISO)}
+                                >
+                                  A
+                                </button>
+                                <button
+                                  type="button"
+                                  className="action-btn action-edit"
+                                  style={{ padding: "3px 8px", fontSize: "11px", borderRadius: "4px" }}
+                                  onClick={() => handleMark(email, "Leave", selectedDateISO)}
+                                >
+                                  L
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
         </div>
       </>
     );

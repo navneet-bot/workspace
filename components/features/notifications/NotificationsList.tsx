@@ -115,8 +115,8 @@ export function NotificationsList({
     <div className="page-stack">
       {canSend && (
         <div className="surface-panel mb-4">
-          <div className="surface-header">
-            <h3 className="surface-title">📣 Send Notification</h3>
+          <div className="surface-header !py-4 !px-5 border-b border-jj-border">
+            <h3 className="surface-title m-0">📣 Send Notification</h3>
           </div>
           <div className="surface-body flex flex-wrap items-end gap-2.5 !p-4">
             <div className="field !mb-0 flex-1 min-w-[160px]">

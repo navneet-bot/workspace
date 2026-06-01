@@ -210,7 +210,7 @@ export function MeetingsList({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="modal w-full !max-w-[520px]"
+              className="modal meeting-modal w-full !max-w-[520px]"
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
                 <h3 style={{ margin: 0 }}>📅 Schedule Meeting</h3>
@@ -224,96 +224,104 @@ export function MeetingsList({
               </div>
 
               <form onSubmit={handleCreate} className="modal-form">
-                <div className="field">
-                  <label>Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Sprint Planning"
-                  />
-                </div>
-
-                <div className="field">
-                  <label>Description</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What is this meeting about?"
-                    rows={2}
-                    style={{ resize: "vertical" }}
-                  />
-                </div>
-
-                <div className="form-row">
+                <div className="form-body">
                   <div className="field">
-                    <label>Date</label>
+                    <label>Title</label>
                     <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Sprint Planning"
                     />
                   </div>
+
                   <div className="field">
-                    <label>Time</label>
-                    <input
-                      type="time"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
+                    <label>Description</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What is this meeting about?"
+                      rows={2}
+                      style={{ resize: "vertical" }}
                     />
                   </div>
-                </div>
 
-                <div className="field">
-                  <label>Google Meet Link</label>
-                  <input
-                    type="text"
-                    value={meetLink}
-                    onChange={(e) => setMeetLink(e.target.value)}
-                    placeholder="https://meet.google.com/..."
-                  />
-                </div>
-
-                <div className="field">
-                  <label style={{ textTransform: "none", letterSpacing: "normal", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>
-                    Invite Members <span className="font-normal text-jj-text-muted">(notifications sent automatically)</span>
-                  </label>
-                  <div className="mb-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMembers(teamMembers.map((u) => u.email))}
-                      className="action-btn action-approve"
-                      style={{ fontSize: "11px" }}
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMembers([])}
-                      className="action-btn action-reject"
-                      style={{ fontSize: "11px" }}
-                    >
-                      Clear All
-                    </button>
+                  <div className="form-row">
+                    <div className="field">
+                      <label>Date</label>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Time</label>
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="flex max-h-[140px] flex-col gap-1 overflow-y-auto rounded-[8px] border border-jj-border bg-jj-surface2 p-2">
-                    {teamMembers.map((u) => (
-                      <label
-                        key={u.email}
-                        className="flex cursor-pointer items-center gap-2.5 rounded-[6px] p-[6px_8px] transition-colors hover:bg-jj-surface/50"
+
+                  <div className="field">
+                    <label>Google Meet Link</label>
+                    <input
+                      type="text"
+                      value={meetLink}
+                      onChange={(e) => setMeetLink(e.target.value)}
+                      placeholder="https://meet.google.com/..."
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label style={{ textTransform: "none", letterSpacing: "normal", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>
+                      Invite Members <span className="font-normal text-jj-text-muted">(notifications sent automatically)</span>
+                    </label>
+                    <div className="mb-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMembers(teamMembers.map((u) => u.email))}
+                        className="action-btn action-approve"
+                        style={{ fontSize: "11px" }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedMembers.includes(u.email)}
-                          onChange={() => toggleMember(u.email)}
-                          className="h-[15px] w-[15px] accent-jj-accent"
-                        />
-                        <span className="text-[13px] font-medium text-jj-text">{u.name}</span>
-                        <span className="ml-auto text-[11px] uppercase tracking-[0.5px] text-jj-text-muted">
-                          {u.role}
-                        </span>
-                      </label>
-                    ))}
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMembers([])}
+                        className="action-btn action-reject"
+                        style={{ fontSize: "11px" }}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    <div className="members-container">
+                      {teamMembers.map((u) => (
+                        <div
+                          key={u.email}
+                          className="member-row"
+                          onClick={() => toggleMember(u.email)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <div className="member-info">
+                            <span className="member-name">{u.name}</span>
+                            <span className="member-role">{u.role}</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={selectedMembers.includes(u.email)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleMember(u.email);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="member-checkbox"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

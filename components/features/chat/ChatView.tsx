@@ -69,11 +69,13 @@ export function ChatView({
   users,
   groups,
   initialSelectedContactId,
+  activeUserEmails = [],
 }: {
   currentUser: { id: number; role: string; email: string };
   users: User[];
   groups: Group[];
   initialSelectedContactId?: string | null;
+  activeUserEmails?: string[];
 }) {
   const { addToast } = useUIStore();
   const [search, setSearch] = useState("");
@@ -687,7 +689,11 @@ export function ChatView({
                       style={{ backgroundColor: `${color}22`, color, borderColor: `${color}44` }}
                     >
                       {c.isGroup ? c.icon || "👥" : c.name.slice(0, 2).toUpperCase()}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-jj-green border-2 border-jj-surface rounded-full" />
+                      {!c.isGroup && (
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-jj-surface rounded-full ${
+                          activeUserEmails.includes(c.email) ? "bg-jj-green" : "bg-jj-text-muted"
+                        }`} />
+                      )}
                     </div>
 
                     <div className="flex flex-col flex-1 min-w-0">
@@ -728,7 +734,60 @@ export function ChatView({
               })()}
               <div className="chat-header-info">
                 <div className="cn text-[14px] font-bold text-jj-text">{selectedContact.name}</div>
-                <div className="cs text-[12px] text-jj-green font-medium">● Active</div>
+                {selectedContact.isGroup ? (
+                  <div className="cs text-[12px] text-jj-text-soft font-medium">
+                    👥 {(() => {
+                      const group = groups.find(g => g.id === selectedContact.dbId);
+                      if (group) {
+                        try {
+                          const parsed = JSON.parse(group.members || "[]");
+                          const count = Array.isArray(parsed) ? parsed.length : 0;
+                          return `${count} ${count === 1 ? 'member' : 'members'}`;
+                        } catch {}
+                      }
+                      return "Group";
+                    })()}
+                  </div>
+                ) : (
+                  (() => {
+                    const isOnline = activeUserEmails.includes(selectedContact.email);
+                    if (isOnline) {
+                      return <div className="cs text-[12px] text-jj-green font-medium">● Active</div>;
+                    }
+                    
+                    // Try to find the last message sent by this contact in messages log to say "Last active X ago"
+                    const contactMessages = messages.filter(m => m.senderId === selectedContact.dbId);
+                    if (contactMessages.length > 0) {
+                      const lastMsg = contactMessages[contactMessages.length - 1];
+                      const date = new Date(lastMsg.sentAt);
+                      
+                      // Format nice string
+                      const now = new Date();
+                      const diffMs = now.getTime() - date.getTime();
+                      const diffMins = Math.floor(diffMs / 60000);
+                      
+                      let timeStr = "";
+                      if (diffMins < 1) timeStr = "just now";
+                      else if (diffMins < 60) timeStr = `${diffMins}m ago`;
+                      else {
+                        const diffHours = Math.floor(diffMins / 60);
+                        if (diffHours < 24) timeStr = `${diffHours}h ago`;
+                        else {
+                          timeStr = date.toLocaleDateString("en-IN", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true
+                          });
+                        }
+                      }
+                      return <div className="cs text-[12px] text-jj-text-soft font-medium">● Last active {timeStr}</div>;
+                    }
+                    
+                    return <div className="cs text-[12px] text-jj-text-muted font-medium">● Offline</div>;
+                  })()
+                )}
               </div>
             </div>
 
