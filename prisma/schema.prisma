@@ -19,6 +19,7 @@ model User {
   mustChangePassword Boolean  @default(false)
   feedbackRating     String   @default("Good")   // Excellent | Good | Average | Needs Improvement
   feedbackComment    String   @default("")
+  jobjockeyId        String?  @unique
   createdAt          DateTime @default(now())
 
   @@map("users")
@@ -117,7 +118,9 @@ model Meeting {
   title       String
   description String   @default("")
   date        String?  // YYYY-MM-DD
-  time        String?  // HH:MM
+  time        String?  // HH:MM (start time)
+  endTime     String?  // HH:MM (end time)
+  duration    Int?     // duration in minutes
   meetLink    String   @default("")
   members     String   @default("[]") // JSON list of emails invited
   createdBy   String?
@@ -221,6 +224,7 @@ model Tutor {
   status         String   @default("Applied") // Applied, Screening, Interview Scheduled, Selected, Onboarded, Rejected, Inactive
   interviewNotes String   @default("")
   statusHistory  String   @default("[]") // JSON log list: e.g. [{"status": "Applied", "timestamp": "..."}]
+  jobjockeyId    String?  @unique
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

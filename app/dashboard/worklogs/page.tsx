@@ -19,8 +19,11 @@ export default async function WorkLogsPage() {
     redirect("/login");
   }
 
-  if (currentUser.role === "intern") {
-    redirect("/dashboard"); // Only admin/super_admin can view worklogs for now
+  const permissions = currentUser.permissions || "";
+  const permList = permissions.split(",").map((p: string) => p.trim());
+  const hasAccess = currentUser.role === "admin" || currentUser.role === "super_admin" || currentUser.role === "tutor" || permList.includes("view_worklogs");
+  if (!hasAccess) {
+    redirect("/dashboard");
   }
 
   const [logs, users] = await Promise.all([

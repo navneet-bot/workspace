@@ -69,7 +69,7 @@ import { buildTutorInvitationEmail } from "./templates/tutor-invitation";
 // ── Email Service Functions ──
 
 export async function sendInvitationEmail(toEmail: string, name: string, role: string, loginEmail?: string, tempPass?: string) {
-  if ((role !== "intern" && role !== "tutor") || !loginEmail || !tempPass) {
+  if (!loginEmail || !tempPass) {
     const html = `
       <div style="font-family:Arial,sans-serif;padding:20px;color:#333;">
         <h2>Hello ${name},</h2>
@@ -91,13 +91,46 @@ export async function sendInvitationEmail(toEmail: string, name: string, role: s
     return dispatchEmail(toEmail, "🎉 Welcome to Job Jockey – Your Tutor Account is Ready", htmlBody);
   }
 
-  const htmlBody = buildInternInvitationEmail({
-    candidateName: name,
-    candidateEmail: loginEmail,
-    generatedPassword: tempPass,
-  });
-  
-  return dispatchEmail(toEmail, "🎉 Welcome to Job Jockey – Your Intern Account is Ready", htmlBody);
+  if (role === "intern") {
+    const htmlBody = buildInternInvitationEmail({
+      candidateName: name,
+      candidateEmail: loginEmail,
+      generatedPassword: tempPass,
+    });
+    return dispatchEmail(toEmail, "🎉 Welcome to Job Jockey – Your Intern Account is Ready", htmlBody);
+  }
+
+  // Generic credentials email template for employees, super admins, etc.
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:30px;color:#333;background:#0f172a;border-radius:12px;max-width:600px;margin:20px auto;box-shadow:0 10px 25px rgba(0,0,0,0.1);">
+      <div style="background:#f59e0b;padding:24px;text-align:center;border-radius:12px 12px 0 0;">
+        <h1 style="margin:0;color:#000;font-size:24px;">Welcome to Job Jockey</h1>
+      </div>
+      <div style="padding:30px;color:#e2e8f0;">
+        <h2 style="color:#f59e0b;margin-top:0;">Hello ${name},</h2>
+        <p style="color:#cbd5e1;line-height:1.6;">Your Job Jockey account has been created successfully. Below are your login credentials to access the platform:</p>
+        
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;margin:24px 0;">
+          <div style="margin-bottom:12px;">
+            <span style="font-size:12px;color:#94a3b8;display:block;">User ID / JobJockey ID</span>
+            <strong style="font-size:16px;color:#f59e0b;word-break:break-all;">📧 ${loginEmail}</strong>
+          </div>
+          <div>
+            <span style="font-size:12px;color:#94a3b8;display:block;">Password</span>
+            <strong style="font-size:16px;color:#f59e0b;word-break:break-all;">🔑 ${tempPass}</strong>
+          </div>
+        </div>
+
+        <p style="color:#cbd5e1;line-height:1.6;">For security reasons, please change your password after logging in for the first time.</p>
+        
+        <div style="border-top:1px solid #334155;margin-top:24px;padding-top:24px;text-align:center;color:#64748b;font-size:12px;">
+          <p>&mdash; The Job Jockey Team</p>
+        </div>
+      </div>
+    </div>
+  `;
+  const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).replace("_", " ");
+  return dispatchEmail(toEmail, `🎉 Welcome to Job Jockey – Your ${formattedRole} Account is Ready`, html);
 }
 
 export async function sendPasswordResetEmail(toEmail: string, resetLink: string) {

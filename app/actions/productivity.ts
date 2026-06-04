@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { deleteExpiredMeetings } from "@/app/actions/meetings";
 
 export interface ProductivityBreakdown {
   attendance: { score: number; rate: number; lateCount: number; present: number; absent: number; leave: number; weight: number };
@@ -325,6 +326,8 @@ export async function getInternProductivityDetails(email: string): Promise<Produ
 
     if (!user) return null;
 
+    await deleteExpiredMeetings();
+
     const [tasks, projects, attendance, workLogs, meetings, chatMessages, groupMessages, breakRequests] = await Promise.all([
       prisma.task.findMany(),
       prisma.project.findMany(),
@@ -364,6 +367,8 @@ export async function getAllInternsProductivity() {
   const interns = await prisma.user.findMany({
     where: { role: "intern" }
   });
+
+  await deleteExpiredMeetings();
 
   const [tasks, projects, attendance, workLogs, meetings, chatMessages, groupMessages, breakRequests] = await Promise.all([
     prisma.task.findMany(),

@@ -94,6 +94,28 @@ export async function updateCandidateStatus(id: number, status: string) {
       const digits = Math.floor(100 + Math.random() * 900); // 100 to 999
       const generatedPassword = `${prefix}${digits}`;
       
+      // Generate Unique JobJockey ID
+      const base = candidate.name
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, ".")
+        .replace(/[^a-z0-9.]/g, "");
+      
+      let jobjockeyId = `${base}@jobjockey.in`;
+      let suffix = "";
+      let counter = 1;
+      while (true) {
+        const candidateId = `${base}${suffix}@jobjockey.in`;
+        const existingJj = await prisma.user.findFirst({
+          where: { jobjockeyId: candidateId }
+        });
+        if (!existingJj) {
+          jobjockeyId = candidateId;
+          break;
+        }
+        suffix = String(counter++);
+      }
+
       const hashedPassword = await bcrypt.hash(generatedPassword, 10);
       resumeData = `LOGIN:${jjEmail}|PASS:${generatedPassword}`;
 
@@ -108,6 +130,7 @@ export async function updateCandidateStatus(id: number, status: string) {
             role: "intern",
             permissions: "",
             mustChangePassword: true,
+            jobjockeyId: jobjockeyId,
           }
         });
 
@@ -125,7 +148,7 @@ export async function updateCandidateStatus(id: number, status: string) {
       if (candidate.email) {
         try {
           const { sendInvitationEmail } = await import("@/lib/email/resend");
-          await sendInvitationEmail(candidate.email, candidate.name, "intern", jjEmail, generatedPassword);
+          await sendInvitationEmail(candidate.email, candidate.name, "intern", jobjockeyId, generatedPassword);
         } catch (mailError) {
           console.error("Resend welcome email failed to send:", mailError);
         }

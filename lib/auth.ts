@@ -26,8 +26,13 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
+          const user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: credentials.email },
+                { jobjockeyId: credentials.email }
+              ]
+            }
           });
 
           console.log("User found:", !!user);

@@ -19,6 +19,8 @@ interface Meeting {
   description: string;
   date: string | null;
   time: string | null;
+  endTime: string | null;
+  duration: number | null;
   meetLink: string;
   members: string; // JSON
   createdBy: string | null;
@@ -43,24 +45,73 @@ export function MeetingsList({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [fromTime, setFromTime] = useState("");
+  const [toTime, setToTime] = useState("");
+  const [duration, setDuration] = useState(30);
   const [meetLink, setMeetLink] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const addMinutesToTime = (timeStr: string, minutes: number): string => {
+    if (!timeStr) return "";
+    const [h, m] = timeStr.split(":").map(Number);
+    const date = new Date();
+    date.setHours(h, m + minutes, 0, 0);
+    return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const calculateMinutesDifference = (time1: string, time2: string): number => {
+    if (!time1 || !time2) return 0;
+    const [h1, m1] = time1.split(":").map(Number);
+    const [h2, m2] = time2.split(":").map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diff < 0) {
+      diff += 24 * 60; // handle cross-midnight
+    }
+    return diff;
+  };
+
+  const handleFromTimeChange = (val: string) => {
+    setFromTime(val);
+    if (val && duration) {
+      setToTime(addMinutesToTime(val, duration));
+    }
+  };
+
+  const handleToTimeChange = (val: string) => {
+    setToTime(val);
+    if (fromTime && val) {
+      const diff = calculateMinutesDifference(fromTime, val);
+      setDuration(diff);
+    }
+  };
+
+  const handleDurationChange = (val: number) => {
+    setDuration(val);
+    let baseTime = fromTime;
+    if (!baseTime) {
+      const now = new Date();
+      baseTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      setFromTime(baseTime);
+    }
+    setToTime(addMinutesToTime(baseTime, val));
+  };
 
   const teamMembers = allUsers.filter((u) => u.role !== "admin");
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return addToast("Title is required", "error");
-    if (!date || !time) return addToast("Date and time are required", "error");
+    if (!date || !fromTime || !toTime) return addToast("Date, start time, and end time are required", "error");
 
     setLoading(true);
     const res = await createMeeting({
       title,
       description,
       date,
-      time,
+      time: fromTime,
+      endTime: toTime,
+      duration: Number(duration),
       meetLink,
       members: JSON.stringify(selectedMembers),
       createdBy: currentUserEmail,
@@ -74,7 +125,9 @@ export function MeetingsList({
       setTitle("");
       setDescription("");
       setDate("");
-      setTime("");
+      setFromTime("");
+      setToTime("");
+      setDuration(30);
       setMeetLink("");
       setSelectedMembers([]);
     } else {
@@ -108,6 +161,13 @@ export function MeetingsList({
             onClick={() => {
               setIsModalOpen(true);
               setDate(new Date().toISOString().split("T")[0]);
+              const now = new Date();
+              const h = String(now.getHours()).padStart(2, "0");
+              const m = String(now.getMinutes()).padStart(2, "0");
+              const currentTime = `${h}:${m}`;
+              setFromTime(currentTime);
+              setToTime(addMinutesToTime(currentTime, 30));
+              setDuration(30);
             }}
             className="btn-sm btn-accent"
           >
@@ -143,7 +203,7 @@ export function MeetingsList({
               <div className="meet-info">
                 <h4>{m.title}</h4>
                 <p>
-                  🕐 {m.time || "TBD"} · by{" "}
+                  🕐 {m.time ? (m.endTime ? `${m.time} - ${m.endTime} (${m.duration} mins)` : m.time) : "TBD"} · by{" "}
                   {m.createdBy ? m.createdBy.split("@")[0] : "admin"}
                 </p>
                 {m.description && (
@@ -257,11 +317,48 @@ export function MeetingsList({
                       />
                     </div>
                     <div className="field">
-                      <label>Time</label>
+                      <label>Duration</label>
+                      <select
+                        value={duration}
+                        onChange={(e) => handleDurationChange(Number(e.target.value))}
+                        style={{
+                          width: "100%",
+                          background: "var(--surface2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "8px",
+                          padding: "9px 12px",
+                          color: "var(--text)",
+                          fontFamily: "inherit",
+                          fontSize: "13px",
+                          outline: "none"
+                        }}
+                      >
+                        <option value={15}>15 minutes</option>
+                        <option value={30}>30 minutes</option>
+                        <option value={45}>45 minutes</option>
+                        <option value={60}>1 hour</option>
+                        <option value={90}>1.5 hours</option>
+                        <option value={120}>2 hours</option>
+                        <option value={180}>3 hours</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="field">
+                      <label>From Time</label>
                       <input
                         type="time"
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
+                        value={fromTime}
+                        onChange={(e) => handleFromTimeChange(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>To Time</label>
+                      <input
+                        type="time"
+                        value={toTime}
+                        onChange={(e) => handleToTimeChange(e.target.value)}
                       />
                     </div>
                   </div>

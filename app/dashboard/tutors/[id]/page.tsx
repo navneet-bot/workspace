@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { TutorProfileView } from "@/components/features/tutors/TutorProfileView";
 
-export default async function TutorDetailPage({ params }: { params: { id: string } }) {
+export default async function TutorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   
   if (!session || !session.user) {
@@ -15,11 +15,13 @@ export default async function TutorDetailPage({ params }: { params: { id: string
   const permissions = (session.user as any).permissions || "";
   const permList = permissions.split(",").map((p: string) => p.trim());
 
-  if (role === "intern" || (role === "super_admin" && !permList.includes("view_tutors"))) {
+  const hasAccess = role === "admin" || role === "super_admin" || role === "tutor" || permList.includes("view_tutors");
+  if (!hasAccess) {
     redirect("/dashboard");
   }
 
-  const id = parseInt(params.id);
+  const { id: rawId } = await params;
+  const id = parseInt(rawId);
   if (isNaN(id)) {
     notFound();
   }

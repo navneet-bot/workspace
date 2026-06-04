@@ -76,24 +76,32 @@ function getNavSections(role: string, permissions: string): NavSection[] {
     ];
   }
 
-  if (role === "super_admin") {
-    const manageItems = [
-      { id: "tasks", name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-      { id: "projects", name: "Projects", href: "/dashboard/projects", icon: FolderKanban },
-      { id: "candidates", name: "Candidates", href: "/dashboard/candidates", icon: Users },
-      { id: "attendance", name: "Attendance", href: "/dashboard/attendance", icon: CalendarCheck },
-      { id: "reports", name: "Reports", href: "/dashboard/reports", icon: FileText }
-    ];
+  if (role === "super_admin" || role === "tutor" || permList.length > 0) {
+    const manageItems = [];
 
-    if (hasPerm("view_tutors")) {
-      manageItems.splice(3, 0, { id: "tutors", name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap });
+    if (role === "super_admin" || role === "tutor" || hasPerm("manage_tasks")) {
+      manageItems.push({ id: "tasks", name: "Tasks", href: "/dashboard/tasks", icon: ListTodo });
     }
-
+    if (role === "super_admin" || role === "tutor" || hasPerm("manage_projects")) {
+      manageItems.push({ id: "projects", name: "Projects", href: "/dashboard/projects", icon: FolderKanban });
+    }
+    if (role === "super_admin" || role === "tutor") {
+      manageItems.push({ id: "candidates", name: "Candidates", href: "/dashboard/candidates", icon: Users });
+    }
+    if (role === "super_admin" || role === "tutor" || hasPerm("manage_attendance")) {
+      manageItems.push({ id: "attendance", name: "Attendance", href: "/dashboard/attendance", icon: CalendarCheck });
+    }
+    if (role === "super_admin" || role === "tutor" || hasPerm("view_reports")) {
+      manageItems.push({ id: "reports", name: "Reports", href: "/dashboard/reports", icon: FileText });
+    }
+    if (hasPerm("view_tutors")) {
+      manageItems.push({ id: "tutors", name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap });
+    }
     if (hasPerm("view_worklogs")) {
       manageItems.push({ id: "worklogs", name: "Work Logs", href: "/dashboard/worklogs", icon: FileText });
     }
 
-    return [
+    const sections: NavSection[] = [
       {
         section: "Main",
         items: [
@@ -104,22 +112,28 @@ function getNavSections(role: string, permissions: string): NavSection[] {
       {
         section: "System",
         items: [{ id: "settings", name: "Settings", href: "/dashboard/settings", icon: Settings }]
-      },
-      {
-        section: "Manage",
-        items: manageItems
-      },
-      {
-        section: "Collaborate",
-        items: [
-          { id: "chat", name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
-          { id: "groups", name: "Groups", href: "/dashboard/groups", icon: Users2 },
-          { id: "meetings", name: "Meetings", href: "/dashboard/meetings", icon: Video },
-          { id: "calendar", name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
-          { id: "notifications", name: "Notifications", href: "/dashboard/notifications", icon: Bell }
-        ]
       }
     ];
+
+    if (manageItems.length > 0) {
+      sections.push({
+        section: "Manage",
+        items: manageItems
+      });
+    }
+
+    sections.push({
+      section: "Collaborate",
+      items: [
+        { id: "chat", name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
+        { id: "groups", name: "Groups", href: "/dashboard/groups", icon: Users2 },
+        { id: "meetings", name: "Meetings", href: "/dashboard/meetings", icon: Video },
+        { id: "calendar", name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+        { id: "notifications", name: "Notifications", href: "/dashboard/notifications", icon: Bell }
+      ]
+    });
+
+    return sections;
   }
 
   // Intern role

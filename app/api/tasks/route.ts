@@ -6,11 +6,15 @@ import { authOptions } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || !session.user?.email) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userRole = (session.user as any).role || "intern";
+    const isAdmin = userRole === "admin" || userRole === "super_admin";
+
     const tasks = await prisma.task.findMany({
+      where: isAdmin ? {} : { assignedTo: session.user.email },
       orderBy: { createdAt: "desc" }
     });
 

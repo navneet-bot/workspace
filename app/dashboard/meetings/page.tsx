@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import { MeetingsList } from "@/components/features/meetings/MeetingsList";
+import { deleteExpiredMeetings } from "@/app/actions/meetings";
 
 export default async function MeetingsPage() {
   const session = await getServerSession(authOptions);
@@ -20,7 +21,11 @@ export default async function MeetingsPage() {
   }
 
   const role = currentUser.role;
-  const canManage = role !== "intern";
+  const permissions = currentUser.permissions || "";
+  const permList = permissions.split(",").map((p: string) => p.trim());
+  const canManage = role === "admin" || role === "super_admin" || role === "tutor" || permList.includes("manage_meetings");
+
+  await deleteExpiredMeetings();
 
   let meetings = await prisma.meeting.findMany({
     orderBy: { createdAt: "desc" }

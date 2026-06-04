@@ -15,7 +15,8 @@ export default async function TutorsPage() {
   const permissions = (session.user as any).permissions || "";
   const permList = permissions.split(",").map((p: string) => p.trim());
 
-  if (role === "intern" || (role === "super_admin" && !permList.includes("view_tutors"))) {
+  const hasAccess = role === "admin" || role === "super_admin" || role === "tutor" || permList.includes("view_tutors");
+  if (!hasAccess) {
     redirect("/dashboard");
   }
 

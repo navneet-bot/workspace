@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import { CalendarView } from "@/components/features/calendar/CalendarView";
+import { deleteExpiredMeetings } from "@/app/actions/meetings";
 
 export default async function CalendarPage() {
   const session = await getServerSession(authOptions);
@@ -22,9 +23,13 @@ export default async function CalendarPage() {
   const role = currentUser.role;
   const isAdmin = role === "admin" || role === "super_admin";
 
+  await deleteExpiredMeetings();
+
   const [meetings, tasks, candidates, attendance] = await Promise.all([
     prisma.meeting.findMany(),
-    prisma.task.findMany(),
+    prisma.task.findMany({
+      where: isAdmin ? {} : { assignedTo: currentUser.email }
+    }),
     isAdmin ? prisma.candidate.findMany({ where: { status: "Approved" } }) : Promise.resolve([]),
     isAdmin ? prisma.attendance.findMany() : Promise.resolve([])
   ]);
@@ -38,7 +43,11 @@ export default async function CalendarPage() {
         label: "📅 " + m.title,
         color: "#f59e0b",
         dateStr: m.date,
-        extra: { time: m.time, description: m.description, link: m.meetLink }
+        extra: { 
+          time: m.endTime ? `${m.time} - ${m.endTime} (${m.duration || 30} mins)` : m.time,
+          description: m.description, 
+          link: m.meetLink 
+        }
       });
     }
   });

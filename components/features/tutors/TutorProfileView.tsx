@@ -149,7 +149,7 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
   };
 
   return (
-    <div className="flex flex-col gap-[20px] pb-10">
+    <div className="flex flex-col pb-10" style={{ gap: "20px" }}>
       
       {/* Header and Back Link */}
       <div className="flex items-center justify-between">
@@ -181,7 +181,7 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
       </div>
 
       {/* Profile Summary Card */}
-      <div className="table-card p-6 flex flex-col md:flex-row gap-6 items-center md:items-start">
+      <div className="table-card flex flex-col md:flex-row items-center md:items-start" style={{ padding: "24px", gap: "24px" }}>
         {tutor.profilePhoto ? (
           <img 
             src={tutor.profilePhoto} 
@@ -206,7 +206,7 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
             <Briefcase size={13} className="text-jj-accent" /> {tutor.occupation || "Independent Tutor"}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 mt-4 text-[12.5px] text-jj-text-soft">
+          <div className="flex flex-wrap items-center justify-center md:justify-start mt-4 text-[12.5px] text-jj-text-soft" style={{ columnGap: "24px", rowGap: "8px" }}>
             {tutor.email && (
               <a href={`mailto:${tutor.email}`} className="flex items-center gap-1.5 hover:text-jj-accent transition-colors">
                 <Mail size={13} /> {tutor.email}
@@ -226,74 +226,19 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
         </div>
       </div>
 
-      {/* Recruitment Pipeline Progress Tracker */}
-      <div className="table-card p-6">
-        <h3 className="text-[14px] font-bold text-jj-text mb-6">Recruitment Progress Timeline</h3>
-        
-        <div className="flex flex-col lg:flex-row items-center lg:justify-between gap-6 lg:gap-3 relative">
-          
-          {PIPELINE_STAGES.map((stage, idx) => {
-            const isCompleted = currentStageIndex >= idx;
-            const isActive = tutor.status === stage;
-            
-            return (
-              <div 
-                key={stage} 
-                className="flex flex-col items-center flex-1 w-full lg:w-auto cursor-pointer"
-                onClick={() => hasPerm("manage_tutor_interviews") && handleStageChange(stage)}
-                title={hasPerm("manage_tutor_interviews") ? `Click to transition to ${stage}` : undefined}
-              >
-                <div className="flex lg:flex-col items-center gap-4 lg:gap-2 w-full lg:w-auto">
-                  
-                  {/* Step Indicator Dot */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-bold text-[13px] transition-all duration-300 ${
-                    isActive 
-                      ? "bg-jj-accent text-black border-jj-accent shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse" 
-                      : isCompleted 
-                        ? "bg-jj-green/20 text-jj-green border-jj-green" 
-                        : "bg-white/5 text-jj-text-muted border-jj-border"
-                  }`}>
-                    {isCompleted ? <Check size={14} className="stroke-[3]" /> : idx + 1}
-                  </div>
-
-                  {/* Stage Name */}
-                  <div className="text-left lg:text-center flex-1 lg:flex-none">
-                    <div className={`text-[13px] font-bold ${isActive ? "text-jj-accent" : isCompleted ? "text-jj-green" : "text-jj-text-muted"}`}>
-                      {stage}
-                    </div>
-                    {isActive && <div className="text-[11px] text-jj-accent-dim font-medium">Current Stage</div>}
-                  </div>
-                </div>
-
-                {/* Progress bar line (horizontal for large screens, hidden on small screens) */}
-                {idx < PIPELINE_STAGES.length - 1 && (
-                  <div className="hidden lg:block absolute h-0.5 bg-jj-border" style={{
-                    width: `calc(${100 / PIPELINE_STAGES.length}% - 32px)`,
-                    left: `calc(${50 / PIPELINE_STAGES.length}% + ${idx * (100 / PIPELINE_STAGES.length)}% + 16px)`,
-                    zIndex: 0,
-                    top: "16px",
-                    background: currentStageIndex > idx ? "var(--green)" : "var(--border)"
-                  }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Main Details Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: "24px" }}>
         
         {/* Left Column - Tutor Details Cards (Basic, Academics, Teaching) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className="lg:col-span-2 flex flex-col" style={{ gap: "24px" }}>
           
           {/* Card 1: Academic Background */}
-          <div className="table-card p-6">
+          <div className="table-card" style={{ padding: "24px" }}>
             <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider mb-4 border-b border-jj-border pb-1.5 flex items-center gap-2">
               <GraduationCap size={15} /> Academic Background
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 text-[13px]" style={{ columnGap: "24px", rowGap: "16px" }}>
               <div>
                 <span className="text-jj-text-muted block">Highest Qualification</span>
                 <strong className="text-jj-text mt-0.5 block">{tutor.qualification || "—"}</strong>
@@ -318,12 +263,12 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
           </div>
 
           {/* Card 2: Teaching Information */}
-          <div className="table-card p-6">
+          <div className="table-card" style={{ padding: "24px" }}>
             <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider mb-4 border-b border-jj-border pb-1.5 flex items-center gap-2">
               <BookOpenIcon size={15} /> Teaching Details
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 text-[13px]" style={{ columnGap: "24px", rowGap: "16px" }}>
               <div>
                 <span className="text-jj-text-muted block">Expertise Subjects</span>
                 <strong className="text-jj-text mt-0.5 block text-jj-accent">{tutor.subject || "—"}</strong>
@@ -340,12 +285,12 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
           </div>
 
           {/* Card 3: Professional & Resume Links */}
-          <div className="table-card p-6">
+          <div className="table-card" style={{ padding: "24px" }}>
             <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider mb-4 border-b border-jj-border pb-1.5 flex items-center gap-2">
               <FileText size={15} /> Professional details & CV
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 text-[13px]" style={{ columnGap: "24px", rowGap: "16px" }}>
               <div>
                 <span className="text-jj-text-muted block">Current Occupation</span>
                 <strong className="text-jj-text mt-0.5 block">{tutor.occupation || "—"}</strong>
@@ -409,16 +354,17 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
         </div>
 
         {/* Right Column - Interview Notes & Status History Logs */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col" style={{ gap: "24px" }}>
           
           {/* Interview Notes Card */}
-          <div className="table-card p-6 flex flex-col">
-            <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider mb-4 border-b border-jj-border pb-1.5 flex items-center gap-2">
+          <div className="table-card flex flex-col" style={{ padding: "24px", gap: "16px" }}>
+            <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider border-b border-jj-border pb-1.5 flex items-center gap-2">
               <Notebook size={15} /> Interview Evaluation Notes
             </h3>
             
             <textarea
-              className="search-input w-full p-3 text-[13px] bg-white/5 border border-jj-border rounded-lg flex-1 min-h-[140px] focus:outline-none focus:border-jj-accent text-jj-text"
+              className="field-textarea"
+              style={{ minHeight: "140px" }}
               placeholder="Write evaluations notes, scheduling info, demo feedback, qualifications assessments here..."
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -429,7 +375,7 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
               <button
                 onClick={handleSaveNotes}
                 disabled={isSavingNotes}
-                className="btn-sm btn-accent mt-4 self-end"
+                className="btn-sm btn-accent self-end"
               >
                 {isSavingNotes ? "Saving Notes..." : "✓ Save Notes"}
               </button>
@@ -437,12 +383,12 @@ export function TutorProfileView({ tutor: initialTutor }: { tutor: Tutor }) {
           </div>
 
           {/* Status History Logs */}
-          <div className="table-card p-6">
+          <div className="table-card" style={{ padding: "24px" }}>
             <h3 className="text-[14px] font-bold text-jj-accent uppercase tracking-wider mb-4 border-b border-jj-border pb-1.5 flex items-center gap-2">
               <Clock size={15} /> Status Audit History
             </h3>
 
-            <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1">
+            <div className="flex flex-col max-h-[300px] overflow-y-auto pr-1" style={{ gap: "16px" }}>
               {sortedHistory.length === 0 ? (
                 <div className="text-[12px] text-jj-text-muted text-center py-4">No audit logs logged.</div>
               ) : (

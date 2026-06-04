@@ -16,6 +16,31 @@ export async function createTutor(data: any) {
       }
     ]);
 
+    // Generate Unique JobJockey ID for Tutor
+    const base = data.name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ".")
+      .replace(/[^a-z0-9.]/g, "");
+    
+    let jobjockeyId = `${base}@jobjockey.in`;
+    let suffix = "";
+    let counter = 1;
+    while (true) {
+      const candidateId = `${base}${suffix}@jobjockey.in`;
+      const existingJj = await prisma.user.findFirst({
+        where: { jobjockeyId: candidateId }
+      });
+      const existingTutor = await prisma.tutor.findFirst({
+        where: { jobjockeyId: candidateId }
+      });
+      if (!existingJj && !existingTutor) {
+        jobjockeyId = candidateId;
+        break;
+      }
+      suffix = String(counter++);
+    }
+
     const tutor = await prisma.tutor.create({
       data: {
         name: data.name,
@@ -41,7 +66,8 @@ export async function createTutor(data: any) {
         resumeUrl: data.resumeUrl || "",
         status,
         interviewNotes: data.interviewNotes || "",
-        statusHistory: history
+        statusHistory: history,
+        jobjockeyId: jobjockeyId
       }
     });
 
@@ -126,6 +152,34 @@ export async function updateTutorStatus(id: number, status: string, notes?: stri
         hashedPassword = await bcrypt.hash(generatedPassword, 10);
       }
 
+      // Generate Unique JobJockey ID for Tutor User if not already set
+      let jobjockeyId = existing.jobjockeyId;
+      if (!existingUser && !jobjockeyId) {
+        const base = existing.name
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, ".")
+          .replace(/[^a-z0-9.]/g, "");
+        
+        jobjockeyId = `${base}@jobjockey.in`;
+        let suffix = "";
+        let counter = 1;
+        while (true) {
+          const candidateId = `${base}${suffix}@jobjockey.in`;
+          const existingJj = await prisma.user.findFirst({
+            where: { jobjockeyId: candidateId }
+          });
+          const existingTutor = await prisma.tutor.findFirst({
+            where: { jobjockeyId: candidateId, NOT: { id: existing.id } }
+          });
+          if (!existingJj && !existingTutor) {
+            jobjockeyId = candidateId;
+            break;
+          }
+          suffix = String(counter++);
+        }
+      }
+
       await prisma.$transaction(async (tx) => {
         if (!existingUser) {
           // Create User with role "tutor"
@@ -137,6 +191,7 @@ export async function updateTutorStatus(id: number, status: string, notes?: stri
               role: "tutor",
               permissions: "",
               mustChangePassword: true,
+              jobjockeyId: jobjockeyId,
             }
           });
         }
@@ -146,6 +201,7 @@ export async function updateTutorStatus(id: number, status: string, notes?: stri
           where: { id },
           data: {
             status,
+            jobjockeyId: jobjockeyId,
             interviewNotes: notes !== undefined ? notes : existing.interviewNotes,
             statusHistory: JSON.stringify(historyList)
           }
@@ -156,7 +212,7 @@ export async function updateTutorStatus(id: number, status: string, notes?: stri
       if (!existingUser && generatedPassword) {
         try {
           const { sendInvitationEmail } = await import("@/lib/email/resend");
-          await sendInvitationEmail(tutorEmail, existing.name, "tutor", tutorEmail, generatedPassword);
+          await sendInvitationEmail(tutorEmail, existing.name, "tutor", jobjockeyId || undefined, generatedPassword);
         } catch (mailError) {
           console.error("Resend welcome email failed to send for tutor:", mailError);
         }

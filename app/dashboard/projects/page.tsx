@@ -7,15 +7,26 @@ import { ProjectsGrid } from "@/components/features/projects/ProjectsGrid";
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
   
-  if (!session || !session.user || (session.user as any).role === "intern") {
-    redirect("/dashboard");
+  if (!session || !session.user) {
+    redirect("/login");
   }
 
   const currentUser = await prisma.user.findUnique({
     where: { email: session.user.email || "" }
   });
 
-  const canManage = currentUser?.role === "admin" || currentUser?.role === "super_admin";
+  if (!currentUser) {
+    redirect("/login");
+  }
+
+  const role = currentUser.role || "intern";
+  const permissions = currentUser.permissions || "";
+  const permList = permissions.split(",").map((p: string) => p.trim());
+
+  const canManage = role === "admin" || role === "super_admin" || role === "tutor" || permList.includes("manage_projects");
+  if (!canManage) {
+    redirect("/dashboard");
+  }
   const userEmail = session.user.email || "";
 
   const projects = await prisma.project.findMany({

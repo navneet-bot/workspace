@@ -108,7 +108,7 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
             {d}
           </div>
           <div className="cal-event-dots flex gap-[2px] flex-wrap mt-[2px]">{dots}</div>
-          <div className="cal-event-pills mt-[2px] flex flex-col gap-0.5 overflow-hidden">
+          <div className="cal-event-pills mt-[2px] flex flex-col gap-0.5 overflow-hidden w-full min-w-0">
             {dayEvents.map((e, idx) => (
               <div
                 key={idx}
@@ -136,9 +136,9 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
     : "";
 
   return (
-    <div className="grid grid-cols-1 items-start gap-[16px] xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 items-start gap-[16px] xl:grid-cols-[minmax(0,1fr)_300px] w-full">
       {/* Calendar Grid */}
-      <div className="chart-card flex flex-col p-5">
+      <div className="chart-card flex flex-col p-5 min-w-0">
         <div className="cal-controls">
           <div className="cal-month">{monthName}</div>
           <div className="cal-nav">

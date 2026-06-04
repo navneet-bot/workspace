@@ -544,7 +544,10 @@ export function ProductivityView({
               className="relative flex max-h-[92vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-xl border border-jj-border bg-jj-bg-surface shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-4 border-b border-jj-border px-5 py-5 sm:px-6">
+              <div 
+                className="flex items-start justify-between gap-4 border-b border-jj-border"
+                style={{ padding: "24px 32px" }}
+              >
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-jj-border bg-jj-bg-muted/50 text-jj-text-soft">
@@ -580,178 +583,210 @@ export function ProductivityView({
                 </button>
               </div>
 
-              <div className="overflow-y-auto px-5 py-5 sm:px-6">
+              <div 
+                className="overflow-y-auto"
+                style={{ padding: "24px 32px" }}
+              >
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
-                  <section className="surface-panel flex flex-col items-center justify-center p-6 text-center" aria-label="Overall performance score">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-jj-text-muted">Overall Score</span>
-                    <div className="relative mt-5 flex h-[220px] w-[220px] items-center justify-center">
-                      <svg className="h-[220px] w-[220px] -rotate-90" viewBox={`0 0 ${gaugeSize} ${gaugeSize}`} aria-hidden="true">
-                        <circle
-                          cx={gaugeSize / 2}
-                          cy={gaugeSize / 2}
-                          r={gaugeRadius}
-                          stroke="rgba(var(--text-muted-rgb), 0.14)"
-                          strokeWidth="14"
-                          fill="transparent"
-                        />
-                        <circle
-                          cx={gaugeSize / 2}
-                          cy={gaugeSize / 2}
-                          r={gaugeRadius}
-                          stroke={getGaugeColor(selectedIntern.overall_score)}
-                          strokeWidth="14"
-                          fill="transparent"
-                          strokeDasharray={gaugeCircumference}
-                          strokeDashoffset={gaugeCircumference * (1 - selectedIntern.overall_score / 100)}
-                          strokeLinecap="round"
-                          className="transition-all duration-700 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute flex flex-col items-center">
-                        <span className="text-[54px] font-extrabold leading-none text-jj-text-main">
-                          {selectedIntern.overall_score}
-                        </span>
-                        <span className="mt-2 text-[13px] font-medium text-jj-text-muted">Performance Score</span>
-                      </div>
-                    </div>
-                    <div className="mt-5 flex items-center gap-2">
-                      <span className="rounded-full border border-jj-border bg-jj-bg-muted/60 px-3 py-1 text-[12px] font-bold text-jj-text-main">
-                        Grade {getGrade(selectedIntern.overall_score)}
-                      </span>
-                      <span className="rounded-full border border-jj-border bg-jj-bg-muted/30 px-3 py-1 text-[12px] font-semibold text-jj-text-muted">
-                        {getTeamRankLabel(selectedIntern)}
-                      </span>
-                    </div>
-                  </section>
-
-                  <section className="surface-panel p-5" aria-labelledby="breakdown-title">
-                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-jj-border/60 pb-3">
-                      <div>
-                        <h3 id="breakdown-title" className="text-[14px] font-bold text-jj-text-main">Performance Breakdown</h3>
-                        <p className="mt-1 text-[12px] text-jj-text-muted">Weighted metrics for the last 30 days</p>
-                      </div>
-                      <span className="hidden rounded-full bg-jj-bg-muted px-3 py-1 text-[11px] font-semibold text-jj-text-muted sm:inline-flex">
-                        Total weight 95%
-                      </span>
-                    </div>
-
-                    {noPerformanceData ? (
-                      <div className="rounded-xl border border-dashed border-jj-border bg-jj-bg-muted/20 p-5 text-[13px] text-jj-text-muted">
-                        No performance data available yet.
-                      </div>
-                    ) : null}
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {metricCards.map((metric) => {
-                        const Icon = metric.icon;
-                        const scoreLabel = metric.score === null ? "No Data" : `${metric.score}%`;
-                        return (
-                          <article key={metric.label} className="rounded-xl border border-jj-border bg-jj-bg-muted/20 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 text-[13px] font-semibold text-jj-text-main">
-                                  <Icon size={15} className="text-jj-text-muted" aria-hidden="true" />
-                                  <span>{metric.label}</span>
-                                </div>
-                                <div className="mt-1 text-[11px] text-jj-text-muted">{metric.weight}% weight</div>
-                              </div>
-                              <span className={`text-[15px] font-bold ${getScoreTextColor(metric.score)}`}>{scoreLabel}</span>
-                            </div>
-                            <div
-                              className="mb-4 mt-2 h-2.5 overflow-hidden rounded-full bg-jj-border/70"
-                              role={metric.score === null ? undefined : "progressbar"}
-                              aria-label={`${metric.label} score`}
-                              aria-valuenow={metric.score ?? undefined}
-                              aria-valuemin={metric.score === null ? undefined : 0}
-                              aria-valuemax={metric.score === null ? undefined : 100}
-                            >
-                              <div
-                                className={`h-full rounded-full ${getScoreFillClass(metric.score)}`}
-                                style={{ width: `${metric.score ?? 0}%` }}
-                              />
-                            </div>
-                            <p className="text-[11px] leading-relaxed text-jj-text-muted">{metric.detail}</p>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </section>
-                </div>
-
-                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
-                  <section className="surface-panel p-5" aria-labelledby="insights-title">
-                    <h3 id="insights-title" className="flex items-center gap-2 text-[14px] font-bold text-jj-text-main">
-                      <Lightbulb size={16} className="text-amber-400" aria-hidden="true" />
-                      Key Insights
-                    </h3>
-                    <div className="mt-4 flex flex-col gap-2">
-                      {generateInsights(selectedIntern).map((insight, idx) => (
-                        <div
-                          key={`${insight.text}-${idx}`}
-                          className={`flex gap-2 rounded-lg border p-3 text-[12px] leading-relaxed ${
-                            insight.tone === "positive"
-                              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300"
-                              : insight.tone === "warning"
-                                ? "border-amber-500/20 bg-amber-500/5 text-amber-200"
-                                : "border-jj-border bg-jj-bg-muted/30 text-jj-text-muted"
-                          }`}
-                        >
-                          {insight.tone === "positive" ? (
-                            <CheckCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                          ) : insight.tone === "warning" ? (
-                            <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                          ) : (
-                            <ShieldAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                          )}
-                          <span>{insight.text}</span>
+                  {/* Left Column: Summary & Insights */}
+                  <div className="flex flex-col gap-6">
+                    <section 
+                      className="surface-panel flex flex-col items-center justify-center text-center" 
+                      style={{ padding: "28px" }}
+                      aria-label="Overall performance score"
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-jj-text-muted">Overall Score</span>
+                      <div className="relative mt-5 flex h-[220px] w-[220px] items-center justify-center">
+                        <svg className="h-[220px] w-[220px] -rotate-90" viewBox={`0 0 ${gaugeSize} ${gaugeSize}`} aria-hidden="true">
+                          <circle
+                            cx={gaugeSize / 2}
+                            cy={gaugeSize / 2}
+                            r={gaugeRadius}
+                            stroke="rgba(var(--text-muted-rgb), 0.14)"
+                            strokeWidth="14"
+                            fill="transparent"
+                          />
+                          <circle
+                            cx={gaugeSize / 2}
+                            cy={gaugeSize / 2}
+                            r={gaugeRadius}
+                            stroke={getGaugeColor(selectedIntern.overall_score)}
+                            strokeWidth="14"
+                            fill="transparent"
+                            strokeDasharray={gaugeCircumference}
+                            strokeDashoffset={gaugeCircumference * (1 - selectedIntern.overall_score / 100)}
+                            strokeLinecap="round"
+                            className="transition-all duration-700 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center">
+                          <span className="text-[54px] font-extrabold leading-none text-jj-text-main">
+                            {selectedIntern.overall_score}
+                          </span>
+                          <span className="mt-2 text-[13px] font-medium text-jj-text-muted">Performance Score</span>
                         </div>
-                      ))}
-                    </div>
-                  </section>
+                      </div>
+                      <div className="mt-5 flex items-center gap-2">
+                        <span className="rounded-full border border-jj-border bg-jj-bg-muted/60 px-3 py-1 text-[12px] font-bold text-jj-text-main">
+                          Grade {getGrade(selectedIntern.overall_score)}
+                        </span>
+                        <span className="rounded-full border border-jj-border bg-jj-bg-muted/30 px-3 py-1 text-[12px] font-semibold text-jj-text-muted">
+                          {getTeamRankLabel(selectedIntern)}
+                        </span>
+                      </div>
+                    </section>
 
-                  <section className="surface-panel p-5" aria-labelledby="manager-review-title">
-                    <h3 id="manager-review-title" className="flex items-center gap-2 text-[14px] font-bold text-jj-text-main">
-                      <Star size={16} className="text-amber-400" aria-hidden="true" />
-                      Manager Evaluation
-                    </h3>
-
-                    <div className="mt-4">
-                      <div className="mb-2 text-[12px] font-semibold text-jj-text-muted">Rating</div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Manager rating">
-                        {["Excellent", "Good", "Average", "Needs Improvement"].map((lvl) => (
-                          <button
-                            key={lvl}
-                            type="button"
-                            role="radio"
-                            aria-checked={rating === lvl}
-                            onClick={() => setRating(lvl)}
-                            className={`min-h-10 rounded-lg border px-3 text-[12px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                              rating === lvl
-                                ? "border-blue-500 bg-blue-500/15 text-blue-200"
-                                : "border-jj-border bg-jj-bg-muted/20 text-jj-text-muted hover:bg-jj-bg-muted/50"
+                    <section 
+                      className="surface-panel" 
+                      style={{ padding: "28px" }}
+                      aria-labelledby="insights-title"
+                    >
+                      <h3 id="insights-title" className="flex items-center gap-2 text-[14px] font-bold text-jj-text-main">
+                        <Lightbulb size={16} className="text-amber-400" aria-hidden="true" />
+                        Key Insights
+                      </h3>
+                      <div className="mt-4 flex flex-col gap-2">
+                        {generateInsights(selectedIntern).map((insight, idx) => (
+                          <div
+                            key={`${insight.text}-${idx}`}
+                            className={`flex gap-3 rounded-lg border text-[12px] leading-relaxed ${
+                              insight.tone === "positive"
+                                ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300"
+                                : insight.tone === "warning"
+                                  ? "border-amber-500/20 bg-amber-500/5 text-amber-200"
+                                  : "border-jj-border bg-jj-bg-muted/30 text-jj-text-muted"
                             }`}
+                            style={{ padding: "14px 18px" }}
                           >
-                            {lvl}
-                          </button>
+                            {insight.tone === "positive" ? (
+                              <CheckCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                            ) : insight.tone === "warning" ? (
+                              <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                            ) : (
+                              <ShieldAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                            )}
+                            <span>{insight.text}</span>
+                          </div>
                         ))}
                       </div>
-                    </div>
+                    </section>
+                  </div>
 
-                    <div className="mt-4 flex flex-col gap-2">
-                      <label htmlFor="review-notes" className="text-[12px] font-semibold text-jj-text-muted">Review Notes</label>
-                      <textarea
-                        id="review-notes"
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Add performance feedback, achievements, strengths, or areas for improvement..."
-                        className="max-h-[140px] min-h-[100px] w-full resize-y rounded-lg border border-jj-border bg-jj-bg-muted/20 p-3 text-[13px] leading-relaxed text-jj-text-main placeholder:text-jj-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </section>
+                  {/* Right Column: Performance Breakdown & Evaluation */}
+                  <div className="flex flex-col gap-6">
+                    <section 
+                      className="surface-panel" 
+                      style={{ padding: "28px" }}
+                      aria-labelledby="breakdown-title"
+                    >
+                      <div className="mb-4 flex items-center justify-between gap-3 border-b border-jj-border/60 pb-3">
+                        <div>
+                          <h3 id="breakdown-title" className="text-[14px] font-bold text-jj-text-main">Performance Breakdown</h3>
+                          <p className="mt-1 text-[12px] text-jj-text-muted">Weighted metrics for the last 30 days</p>
+                        </div>
+                        <span className="hidden rounded-full bg-jj-bg-muted px-3 py-1 text-[11px] font-semibold text-jj-text-muted sm:inline-flex">
+                          Total weight 95%
+                        </span>
+                      </div>
+
+                      {noPerformanceData ? (
+                        <div className="rounded-xl border border-dashed border-jj-border bg-jj-bg-muted/20 p-5 text-[13px] text-jj-text-muted">
+                          No performance data available yet.
+                        </div>
+                      ) : null}
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {metricCards.map((metric) => {
+                          const Icon = metric.icon;
+                          const scoreLabel = metric.score === null ? "No Data" : `${metric.score}%`;
+                          return (
+                            <article 
+                              key={metric.label} 
+                              className="rounded-xl border border-jj-border bg-jj-bg-muted/20"
+                              style={{ padding: "18px" }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 text-[13px] font-semibold text-jj-text-main">
+                                    <Icon size={15} className="text-jj-text-muted" aria-hidden="true" />
+                                    <span>{metric.label}</span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-jj-text-muted">{metric.weight}% weight</div>
+                                </div>
+                                <span className={`text-[15px] font-bold ${getScoreTextColor(metric.score)}`}>{scoreLabel}</span>
+                              </div>
+                              <div
+                                className="mb-4 mt-2 h-2.5 overflow-hidden rounded-full bg-jj-border/70"
+                                role={metric.score === null ? undefined : "progressbar"}
+                                aria-label={`${metric.label} score`}
+                                aria-valuenow={metric.score ?? undefined}
+                                aria-valuemin={metric.score === null ? undefined : 0}
+                                aria-valuemax={metric.score === null ? undefined : 100}
+                              >
+                                <div
+                                  className={`h-full rounded-full ${getScoreFillClass(metric.score)}`}
+                                  style={{ width: `${metric.score ?? 0}%` }}
+                                />
+                              </div>
+                              <p className="text-[11px] leading-relaxed text-jj-text-muted">{metric.detail}</p>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section 
+                      className="surface-panel" 
+                      style={{ padding: "28px" }}
+                      aria-labelledby="manager-review-title"
+                    >
+                      <h3 id="manager-review-title" className="flex items-center gap-2 text-[14px] font-bold text-jj-text-main">
+                        <Star size={16} className="text-amber-400" aria-hidden="true" />
+                        Manager Evaluation
+                      </h3>
+
+                      <div className="mt-4">
+                        <div className="mb-2 text-[12px] font-semibold text-jj-text-muted">Rating</div>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Manager rating">
+                          {["Excellent", "Good", "Average", "Needs Improvement"].map((lvl) => (
+                            <button
+                              key={lvl}
+                              type="button"
+                              role="radio"
+                              aria-checked={rating === lvl}
+                              onClick={() => setRating(lvl)}
+                              className={`min-h-11 rounded-lg border px-4 text-[12px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                                rating === lvl
+                                  ? "border-blue-500 bg-blue-500/15 text-blue-200"
+                                  : "border-jj-border bg-jj-bg-muted/20 text-jj-text-muted hover:bg-jj-bg-muted/50"
+                              }`}
+                            >
+                              {lvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2">
+                        <label htmlFor="review-notes" className="text-[12px] font-semibold text-jj-text-muted">Review Notes</label>
+                        <textarea
+                          id="review-notes"
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          placeholder="Add performance feedback, achievements, strengths, or areas for improvement..."
+                          className="max-h-[140px] min-h-[100px] w-full resize-y rounded-lg border border-jj-border bg-jj-bg-muted/20 text-[13px] leading-relaxed text-jj-text-main placeholder:text-jj-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          style={{ padding: "16px" }}
+                        />
+                      </div>
+                    </section>
+                  </div>
                 </div>
               </div>
 
-              <div className="sticky bottom-0 flex justify-end gap-3 border-t border-jj-border bg-jj-bg-surface px-5 py-4 sm:px-6">
+              <div 
+                className="sticky bottom-0 flex justify-end gap-3 border-t border-jj-border bg-jj-bg-surface"
+                style={{ padding: "16px 32px" }}
+              >
                 <button
                   type="button"
                   onClick={() => setSelectedIntern(null)}
