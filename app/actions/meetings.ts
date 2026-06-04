@@ -18,7 +18,9 @@ export async function deleteExpiredMeetings() {
       const [year, month, day] = m.date.split("-").map(Number);
       const [hours, minutes] = endT.split(":").map(Number);
       
-      const meetingEndDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const isoStr = `${pad(year)}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+      const meetingEndDateTime = new Date(isoStr);
       
       if (now > meetingEndDateTime) {
         expiredIds.push(m.id);

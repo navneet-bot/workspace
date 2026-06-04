@@ -33,7 +33,6 @@ const ALL_PERMISSIONS = [
   { key: "send_notifications", label: "Send Notifications", desc: "Can send notifications to team", icon: "🔔" },
   { key: "view_productivity", label: "View Productivity", desc: "Can view productivity reports", icon: "📊" },
   { key: "manage_projects", label: "Manage Projects", desc: "Can create and update projects", icon: "🚀" },
-  { key: "request_break", label: "Request Break", desc: "Can request short breaks during working hours", icon: "☕" },
   { key: "approve_break", label: "Approve Break", desc: "Can approve intern break requests", icon: "✅" },
   { key: "reject_break", label: "Reject Break", desc: "Can reject intern break requests", icon: "❌" },
   { key: "view_break_requests", label: "View Break Requests", desc: "Can view the list and logs of break requests", icon: "📋" },

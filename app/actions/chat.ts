@@ -139,13 +139,13 @@ export async function sendGroupMessage(groupId: number, senderEmail: string, mes
       else if (message.length > 80) preview = message.slice(0, 80) + "...";
 
       for (const email of members) {
-        if (email !== senderEmail) {
+        if (email && typeof email === "string" && email.toLowerCase().trim() !== senderEmail.toLowerCase().trim()) {
           await prisma.notification.create({
             data: {
               title: `💬 ${senderUser.name} in ${group.name}`,
               body: preview,
               icon: "💬",
-              targetEmail: email
+              targetEmail: email.trim()
             }
           });
         }
@@ -242,7 +242,7 @@ export async function fetchConversations(userId: number, userEmail: string) {
         readBy = JSON.parse(msg.readBy || "[]");
       } catch {}
       
-      if (msg.sender !== userEmail && !readBy.includes(userId)) {
+      if (msg.sender && msg.sender.toLowerCase().trim() !== userEmail.toLowerCase().trim() && !readBy.includes(userId)) {
         conversations[contactId].unreadCount++;
       }
     }

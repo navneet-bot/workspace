@@ -35,7 +35,7 @@ function calculateUserProductivity(
   const currentDate = new Date();
 
   // 1. Attendance (20%)
-  const userAtt = attendance.filter((a) => a.email === email);
+  const userAtt = attendance.filter((a) => a.email?.toLowerCase().trim() === email?.toLowerCase().trim());
   const present = userAtt.filter((a) => a.status === "Present").length;
   const absent = userAtt.filter((a) => a.status === "Absent").length;
   const leave = userAtt.filter((a) => a.status === "Leave").length;
@@ -43,7 +43,7 @@ function calculateUserProductivity(
   const attendanceRate = totalDays > 0 ? present / totalDays : 1.0;
 
   // Late check-ins calculation
-  const userLogs = workLogs.filter((wl) => wl.email === email);
+  const userLogs = workLogs.filter((wl) => wl.email?.toLowerCase().trim() === email?.toLowerCase().trim());
   let lateCount = 0;
   userLogs.forEach((wl) => {
     if (wl.loginTime) {
@@ -75,7 +75,7 @@ function calculateUserProductivity(
   attScore = Math.max(0, Math.min(100, attScore));
 
   // 2. Tasks (30%)
-  const userTasks = tasks.filter((t) => t.assignedTo === email);
+  const userTasks = tasks.filter((t) => t.assignedTo?.toLowerCase().trim() === email?.toLowerCase().trim());
   const tasksTotal = userTasks.length;
   const tasksCompleted = userTasks.filter((t) => t.status === "Completed").length;
   
@@ -124,14 +124,14 @@ function calculateUserProductivity(
   const userProjects = projects.filter((p) => {
     try {
       const membersList = p.members ? JSON.parse(p.members) : [];
-      return Array.isArray(membersList) && membersList.includes(email);
+      return Array.isArray(membersList) && membersList.map((m: string) => m.toLowerCase().trim()).includes(email.toLowerCase().trim());
     } catch {
-      return p.members && p.members.includes(email);
+      return p.members && p.members.toLowerCase().includes(email.toLowerCase().trim());
     }
   });
   const projectsTotal = userProjects.length;
   const projectsCompleted = userProjects.filter((p) => p.status === "Completed").length;
-  const projectsLed = projects.filter((p) => p.createdBy === email).length;
+  const projectsLed = projects.filter((p) => p.createdBy?.toLowerCase().trim() === email?.toLowerCase().trim()).length;
 
   let projectScore = projectsTotal > 0 ? (projectsCompleted / projectsTotal) * 100 : 100;
   // Led projects bonus
@@ -161,9 +161,9 @@ function calculateUserProductivity(
   const userMeetings = meetings.filter((m) => {
     try {
       const membersList = m.members ? JSON.parse(m.members) : [];
-      return Array.isArray(membersList) && membersList.includes(email);
+      return Array.isArray(membersList) && membersList.map((m: string) => m.toLowerCase().trim()).includes(email.toLowerCase().trim());
     } catch {
-      return m.members && m.members.includes(email);
+      return m.members && m.members.toLowerCase().includes(email.toLowerCase().trim());
     }
   });
 
@@ -195,7 +195,7 @@ function calculateUserProductivity(
 
   // 6. Communication (5%)
   const chatSentCount = chatMessages.filter((cm) => cm.senderId === userId).length;
-  const groupSentCount = groupMessages.filter((gm) => gm.sender === email).length;
+  const groupSentCount = groupMessages.filter((gm) => gm.sender?.toLowerCase().trim() === email?.toLowerCase().trim()).length;
   const totalMessages = chatSentCount + groupSentCount;
 
   let commScore = 30; // base score for 0 messages
@@ -208,7 +208,7 @@ function calculateUserProductivity(
   }
 
   // 7. Break Behaviour (5%)
-  const userBreaks = breakRequests.filter((b) => b.userEmail === email);
+  const userBreaks = breakRequests.filter((b) => b.userEmail?.toLowerCase().trim() === email?.toLowerCase().trim());
   const approvedBreaks = userBreaks.filter((b) => b.status === "approved" || b.status === "expired");
   const unapprovedCount = userBreaks.filter((b) => b.status === "rejected").length;
   const totalBreakDuration = approvedBreaks.reduce((sum, b) => sum + b.duration, 0);
@@ -316,7 +316,7 @@ export async function getInternProductivityDetails(email: string): Promise<Produ
     if (!session || !sessionUser) return null;
 
     // Check authorization: must be admin/super_admin or the user requesting their own details
-    const isSelf = sessionUser.email === email;
+    const isSelf = sessionUser.email?.toLowerCase().trim() === email?.toLowerCase().trim();
     const isAdmin = sessionUser.role === "admin" || sessionUser.role === "super_admin";
     if (!isSelf && !isAdmin) return null;
 

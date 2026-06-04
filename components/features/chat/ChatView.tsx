@@ -894,11 +894,11 @@ export function ChatView({
                   const m = item.data;
                   // Direct message is senderId. Group message is sender (email)
                   const isMe = selectedContact.isGroup
-                    ? m.sender === currentUser.email
+                    ? m.sender?.toLowerCase().trim() === currentUser.email.toLowerCase().trim()
                     : m.senderId === currentUser.id;
 
                   const senderName = selectedContact.isGroup
-                    ? users.find(u => u.email === m.sender)?.name || m.sender?.split("@")[0] || "Unknown"
+                    ? users.find(u => u.email.toLowerCase().trim() === m.sender?.toLowerCase().trim())?.name || m.sender?.split("@")[0] || "Unknown"
                     : selectedContact.name;
 
                   return (
