@@ -88,10 +88,10 @@ function getNavSections(role: string, permissions: string): NavSection[] {
     if (role === "super_admin" || role === "tutor") {
       manageItems.push({ id: "candidates", name: "Candidates", href: "/dashboard/candidates", icon: Users });
     }
-    if (role === "super_admin" || role === "tutor" || hasPerm("manage_attendance")) {
+    if ((role === "super_admin" || role === "tutor" || hasPerm("manage_attendance")) && role !== "intern") {
       manageItems.push({ id: "attendance", name: "Attendance", href: "/dashboard/attendance", icon: CalendarCheck });
     }
-    if (role === "super_admin" || role === "tutor" || hasPerm("view_reports")) {
+    if ((role === "super_admin" || role === "tutor" || hasPerm("view_reports")) && role !== "intern") {
       manageItems.push({ id: "reports", name: "Reports", href: "/dashboard/reports", icon: FileText });
     }
     if (hasPerm("view_tutors")) {
@@ -101,13 +101,20 @@ function getNavSections(role: string, permissions: string): NavSection[] {
       manageItems.push({ id: "worklogs", name: "Work Logs", href: "/dashboard/worklogs", icon: FileText });
     }
 
+    const mainItems = [
+      { id: "dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { id: "mytasks", name: "My Tasks", href: "/dashboard/mytasks", icon: CheckSquare }
+    ];
+
+    if (role === "intern") {
+      mainItems.push({ id: "attendance", name: "Attendance", href: "/dashboard/attendance", icon: CalendarCheck });
+      mainItems.push({ id: "reports", name: "Reports", href: "/dashboard/reports", icon: FileText });
+    }
+
     const sections: NavSection[] = [
       {
         section: "Main",
-        items: [
-          { id: "dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-          { id: "mytasks", name: "My Tasks", href: "/dashboard/mytasks", icon: CheckSquare }
-        ]
+        items: mainItems
       },
       {
         section: "System",

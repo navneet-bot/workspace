@@ -54,3 +54,29 @@ export async function reviewReport(id: number) {
     return { success: false, error: "Failed to review report" };
   }
 }
+
+export async function updateReport(id: number, data: { title: string; description: string; fileName?: string; fileData?: string }) {
+  try {
+    const updated = await prisma.report.update({
+      where: { id },
+      data,
+    });
+    revalidatePath("/dashboard/reports");
+    return { success: true, report: updated };
+  } catch (error) {
+    return { success: false, error: "Failed to update report" };
+  }
+}
+
+export async function deleteReport(id: number) {
+  try {
+    await prisma.report.delete({
+      where: { id },
+    });
+    revalidatePath("/dashboard/reports");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete report" };
+  }
+}
+

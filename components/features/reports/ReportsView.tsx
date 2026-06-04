@@ -2,8 +2,8 @@
 
 import { useUIStore } from "@/hooks/useUIStore";
 import { useState, useRef } from "react";
-import { submitReport, reviewReport } from "@/app/actions/reports";
-import { Paperclip, X } from "lucide-react";
+import { submitReport, reviewReport, updateReport, deleteReport } from "@/app/actions/reports";
+import { Paperclip, X, Pencil, Trash2 } from "lucide-react";
 
 interface Report {
   id: number;
@@ -34,6 +34,14 @@ export function ReportsView({
   const [fileName, setFileName] = useState("");
   const [fileData, setFileData] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Edit State
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editFileName, setEditFileName] = useState("");
+  const [editFileData, setEditFileData] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,6 +97,70 @@ export function ReportsView({
       );
     } else {
       addToast(res.error || "Failed to review", "error");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to permanently delete this report?")) return;
+    const res = await deleteReport(id);
+    if (res.success) {
+      addToast("Report deleted successfully", "success");
+      setReportsList((prev) => prev.filter((r) => r.id !== id));
+    } else {
+      addToast(res.error || "Failed to delete report", "error");
+    }
+  };
+
+  const startEdit = (report: Report) => {
+    setEditingReport(report);
+    setEditTitle(report.title);
+    setEditDescription(report.description);
+    setEditFileName(report.fileName || "");
+    setEditFileData(report.fileData || "");
+  };
+
+  const clearEditFile = () => {
+    setEditFileName("");
+    setEditFileData("");
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setEditFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setEditFileData(result.split(",")[1]);
+      addToast(`New file ready: ${file.name}`, "success");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingReport) return;
+    if (!editTitle.trim()) return addToast("Task Title is required", "error");
+    if (!editDescription.trim()) return addToast("Description is required", "error");
+
+    setIsSavingEdit(true);
+    const updateData: any = {
+      title: editTitle,
+      description: editDescription,
+      fileName: editFileName,
+      fileData: editFileData,
+    };
+    const res = await updateReport(editingReport.id, updateData);
+    setIsSavingEdit(false);
+
+    if (res.success && res.report) {
+      addToast("Report updated successfully!", "success");
+      setReportsList((prev) =>
+        prev.map((r) => (r.id === editingReport.id ? { ...r, ...res.report } : r))
+      );
+      setEditingReport(null);
+    } else {
+      addToast(res.error || "Failed to update report", "error");
     }
   };
 
@@ -203,6 +275,7 @@ export function ReportsView({
                 <th>Description</th>
                 <th>File</th>
                 {canManage && <th>Status</th>}
+                <th style={{ minWidth: "100px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -257,6 +330,30 @@ export function ReportsView({
                         )}
                       </td>
                     )}
+                    <td>
+                      {(canManage || r.submittedBy === currentUserEmail) ? (
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            onClick={() => startEdit(r)}
+                            className="action-btn action-edit flex items-center justify-center"
+                            style={{ width: "28px", height: "28px", padding: 0, borderRadius: "6px" }}
+                            title="Edit Report"
+                          >
+                            <Pencil size={12} className="stroke-[2.5]" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r.id)}
+                            className="action-btn action-reject flex items-center justify-center"
+                            style={{ width: "28px", height: "28px", padding: 0, borderRadius: "6px" }}
+                            title="Delete Report"
+                          >
+                            <Trash2 size={12} className="stroke-[2.5]" />
+                          </button>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -264,6 +361,97 @@ export function ReportsView({
           </table>
         </div>
       </div>
+
+      {editingReport && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.7)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(3px)",
+        }}>
+          <div style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "90vw",
+            maxWidth: "500px",
+            boxShadow: "0 24px 64px rgba(0,0,0,.5)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600 }}>Edit Report</h3>
+              <button 
+                onClick={() => setEditingReport(null)}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="field">
+              <label>Task Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="What task are you reporting on?"
+              />
+            </div>
+
+            <div className="field">
+              <label>Description</label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Describe what you worked on..."
+                rows={4}
+              />
+            </div>
+
+            <div className="field">
+              <label>
+                Attach File <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span>
+              </label>
+              <label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", background: "var(--surface2)", border: "1.5px dashed var(--border)", borderRadius: "10px", padding: "12px 18px", transition: "border-color .2s" }}>
+                <span style={{ fontSize: "20px" }}>📎</span>
+                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                  {editFileName ? "Replace file" : "Click to choose file or drop here"}
+                </span>
+                <input type="file" onChange={handleEditFileChange} style={{ display: "none" }} />
+              </label>
+              {editFileName && (
+                <div style={{ marginTop: "8px", padding: "8px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "8px", fontSize: "12.5px", color: "var(--green)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>✅</span><span style={{ wordBreak: "break-all" }}>{editFileName}</span>
+                  <button onClick={clearEditFile} style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: "14px" }}>✕</button>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setEditingReport(null)}
+                className="btn-sm btn-outline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="btn-sm btn-accent"
+              >
+                {isSavingEdit ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
