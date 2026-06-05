@@ -254,7 +254,6 @@ export function DashboardHeader({ userEmail }: { userEmail: string }) {
             <div
               id="notifPopup"
               className={`${isNotifPopupOpen ? "open" : ""}`}
-              style={{ top: "45px", right: "0px" }}
             >
               <div className="notif-popup-header">
                 <span className="font-semibold text-jj-text text-[13.5px]">🔔 Notifications</span>
