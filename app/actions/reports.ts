@@ -25,37 +25,47 @@ export async function submitReport(data: {
   recipients?: string[];
 }) {
   try {
-    let targetEmails = data.recipients || [];
+    let targetEmails: string[] = [];
 
-    // Find projects where the user is a member and retrieve the manager's email
-    if (data.submittedBy) {
-      const projects = await prisma.project.findMany({
-        select: { members: true, managerEmail: true }
-      });
-      const userProjects = projects.filter(p => {
-        try {
-          const members = JSON.parse(p.members || "[]");
-          return Array.isArray(members) && members.includes(data.submittedBy);
-        } catch {
-          return false;
-        }
-      });
-      const managerEmails = userProjects
-        .flatMap(p => getProjectManagerEmails(p.managerEmail));
-      if (managerEmails.length > 0) {
-        targetEmails = Array.from(new Set([...targetEmails, ...managerEmails]));
-      }
-    }
-
-    if (targetEmails.length === 0) {
-      // Fallback: Fetch all admin and super admin users
+    if (data.recipients && data.recipients.length > 0) {
+      // Intern selected specific recipients → send to admin + those recipients only
       const admins = await prisma.user.findMany({
-        where: {
-          role: { in: ["admin", "super_admin", "tutor"] }
-        },
+        where: { role: { in: ["admin", "super_admin"] } },
         select: { email: true }
       });
-      targetEmails = admins.map(a => a.email).filter(Boolean) as string[];
+      const adminEmails = admins.map(a => a.email).filter(Boolean) as string[];
+      targetEmails = Array.from(new Set([...adminEmails, ...data.recipients]));
+    } else {
+      // No specific recipients → auto-detect project managers, or fallback to all staff
+      targetEmails = [];
+
+      if (data.submittedBy) {
+        const projects = await prisma.project.findMany({
+          select: { members: true, managerEmail: true }
+        });
+        const userProjects = projects.filter(p => {
+          try {
+            const members = JSON.parse(p.members || "[]");
+            return Array.isArray(members) && members.includes(data.submittedBy);
+          } catch {
+            return false;
+          }
+        });
+        const managerEmails = userProjects
+          .flatMap(p => getProjectManagerEmails(p.managerEmail));
+        if (managerEmails.length > 0) {
+          targetEmails = Array.from(new Set([...targetEmails, ...managerEmails]));
+        }
+      }
+
+      if (targetEmails.length === 0) {
+        // Fallback: Fetch all admin, super_admin, and tutor users
+        const staff = await prisma.user.findMany({
+          where: { role: { in: ["admin", "super_admin", "tutor"] } },
+          select: { email: true }
+        });
+        targetEmails = staff.map(a => a.email).filter(Boolean) as string[];
+      }
     }
 
     const { recipients, ...reportData } = data;

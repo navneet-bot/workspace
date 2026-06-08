@@ -97,6 +97,8 @@ model Attendance {
   totalBreakDuration  Int      @default(0)
   leaveType           String?
   leaveReason         String?
+  approvedBy          String?
+  approvedAt          DateTime?
 
   @@index([email])
   @@index([date])

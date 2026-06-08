@@ -11,7 +11,10 @@ export async function GET(req: Request) {
     }
 
     const role = (session.user as any).role || "intern";
-    if (role !== "admin" && role !== "super_admin") {
+    const permissions = (session.user as any).permissions || "";
+    const permList = permissions.split(",").map((p: string) => p.trim());
+    const canViewAttendance = role === "admin" || role === "super_admin" || permList.includes("manage_attendance");
+    if (!canViewAttendance) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 

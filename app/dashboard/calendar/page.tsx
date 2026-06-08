@@ -15,6 +15,7 @@ type CalendarEvent = {
     description?: string;
     link?: string;
     descriptionText?: string;
+    created_by?: string;
   };
 };
 
@@ -35,19 +36,20 @@ export default async function CalendarPage() {
 
   const role = currentUser.role;
   const isAdmin = role === "admin" || role === "super_admin";
+  const isStaffOrAdmin = isAdmin || role === "tutor";
 
   await deleteExpiredMeetings();
 
   const [meetings, tasks, projects, candidates, attendance] = await Promise.all([
     prisma.meeting.findMany(),
     prisma.task.findMany({
-      where: isAdmin ? {} : { assignedTo: currentUser.email }
+      where: isStaffOrAdmin ? {} : { assignedTo: currentUser.email }
     }),
     prisma.project.findMany({
-      where: isAdmin ? {} : { OR: [{ createdBy: currentUser.email }, { managerEmail: currentUser.email }] }
+      where: isStaffOrAdmin ? {} : { OR: [{ createdBy: currentUser.email }, { managerEmail: currentUser.email }] }
     }),
     isAdmin ? prisma.candidate.findMany({ where: { status: "Approved" } }) : Promise.resolve([]),
-    isAdmin ? prisma.attendance.findMany() : Promise.resolve([])
+    isStaffOrAdmin ? prisma.attendance.findMany() : Promise.resolve([])
   ]);
 
   const events: CalendarEvent[] = [];
@@ -114,11 +116,18 @@ export default async function CalendarPage() {
     if (a.status === "Leave" && a.date) {
       const u = users.find(x => x.email === a.email);
       const name = u ? u.name : (a.email?.split("@")[0] || "Unknown");
+      const approver = a.approvedBy ? users.find(x => x.email === a.approvedBy) : null;
       events.push({
         type: "leave",
         label: "🏖 " + name + " on Leave",
         color: "#8b5cf6",
-        dateStr: a.date
+        dateStr: a.date,
+        extra: {
+          description: a.leaveReason || undefined,
+          descriptionText: a.leaveType || undefined,
+          created_by: a.approvedBy || undefined,
+          time: approver?.name || a.approvedBy?.split("@")[0] || undefined,
+        }
       });
     }
   });

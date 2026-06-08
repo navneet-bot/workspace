@@ -21,7 +21,8 @@ export async function markAttendance(
   status: string,
   date: string,
   leaveType?: string,
-  leaveReason?: string
+  leaveReason?: string,
+  approvedBy?: string
 ) {
   try {
     const existing = await prisma.attendance.findFirst({
@@ -58,6 +59,10 @@ export async function markAttendance(
       const updateData: any = { status };
       if (leaveType !== undefined) updateData.leaveType = leaveType;
       if (leaveReason !== undefined) updateData.leaveReason = leaveReason;
+      if (approvedBy !== undefined && status === "Leave") {
+        updateData.approvedBy = approvedBy;
+        updateData.approvedAt = new Date();
+      }
 
       await prisma.attendance.update({
         where: { id: existing.id },
@@ -136,10 +141,9 @@ export async function getPendingLeaves() {
   try {
     const pending = await prisma.attendance.findMany({
       where: { status: "Leave Requested" },
-      orderBy: { date: "asc" }
+      orderBy: [{ email: "asc" }, { date: "asc" }]
     });
     
-    // Fetch user names for these emails
     const emails = pending.map(p => p.email).filter(Boolean) as string[];
     const users = await prisma.user.findMany({
       where: { email: { in: emails } },
@@ -148,20 +152,118 @@ export async function getPendingLeaves() {
     
     const userMap = new Map(users.map(u => [u.email, u.name]));
     
+    // Group consecutive dates by (email, leaveType, leaveReason)
+    const groups: {
+      email: string;
+      name: string;
+      startDate: string;
+      endDate: string;
+      dayCount: number;
+      leaveType: string | null;
+      leaveReason: string | null;
+      ids: number[];
+      dates: string[];
+    }[] = [];
+
+    for (const p of pending) {
+      const email = p.email || "";
+      const key = `${email}|${p.leaveType || ""}|${p.leaveReason || ""}`;
+      const lastGroup = groups[groups.length - 1];
+
+      if (lastGroup) {
+        const lastKey = `${lastGroup.email}|${lastGroup.leaveType || ""}|${lastGroup.leaveReason || ""}`;
+        const prevDate = new Date(lastGroup.endDate);
+        const curDate = new Date(p.date || "");
+        const diffDays = (curDate.getTime() - prevDate.getTime()) / 86400000;
+
+        if (key === lastKey && diffDays === 1) {
+          lastGroup.endDate = p.date!;
+          lastGroup.dayCount++;
+          lastGroup.ids.push(p.id);
+          lastGroup.dates.push(p.date!);
+          continue;
+        }
+      }
+
+      groups.push({
+        email,
+        name: userMap.get(email) || email.split("@")[0] || "Unknown",
+        startDate: p.date!,
+        endDate: p.date!,
+        dayCount: 1,
+        leaveType: p.leaveType,
+        leaveReason: p.leaveReason,
+        ids: [p.id],
+        dates: [p.date!],
+      });
+    }
+    
     return {
       success: true,
-      leaves: pending.map(p => ({
-        id: p.id,
-        email: p.email,
-        name: userMap.get(p.email || "") || p.email?.split("@")[0] || "Unknown",
-        date: p.date,
-        status: p.status,
-        leaveType: p.leaveType,
-        leaveReason: p.leaveReason
-      }))
+      leaves: groups
     };
   } catch (error: any) {
     console.error("Error fetching pending leaves:", error);
     return { success: false, error: error.message || "Failed to fetch pending leaves" };
+  }
+}
+
+export async function batchApproveLeave(email: string, dates: string[], approvedBy?: string) {
+  try {
+    await prisma.attendance.updateMany({
+      where: {
+        email,
+        date: { in: dates },
+        status: "Leave Requested",
+      },
+      data: { status: "Leave", approvedBy: approvedBy || null, approvedAt: new Date() },
+    });
+
+    await prisma.notification.create({
+      data: {
+        title: "✅ Leave Approved",
+        body: `Your leave request for ${dates.length} day(s) (${dates[0]} to ${dates[dates.length - 1]}) has been approved.`,
+        icon: "🏖",
+        targetEmail: email,
+      },
+    });
+
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/productivity");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error batch approving leave:", error);
+    return { success: false, error: error.message || "Failed to approve leave" };
+  }
+}
+
+export async function batchRejectLeave(email: string, dates: string[]) {
+  try {
+    await prisma.attendance.updateMany({
+      where: {
+        email,
+        date: { in: dates },
+        status: "Leave Requested",
+      },
+      data: { status: "Absent" },
+    });
+
+    await prisma.notification.create({
+      data: {
+        title: "❌ Leave Rejected",
+        body: `Your leave request for ${dates.length} day(s) (${dates[0]} to ${dates[dates.length - 1]}) was rejected.`,
+        icon: "❌",
+        targetEmail: email,
+      },
+    });
+
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/productivity");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error batch rejecting leave:", error);
+    return { success: false, error: error.message || "Failed to reject leave" };
   }
 }

@@ -13,7 +13,10 @@ export default async function AttendancePage() {
 
   const role = (session.user as any).role || "intern";
   const permissions = (session.user as any).permissions || "";
-  
+  const permList = (permissions || "").split(",").map((p: string) => p.trim());
+  const canAccess = role === "admin" || role === "super_admin" || role === "intern" || permList.includes("manage_attendance");
+  if (!canAccess) redirect("/dashboard");
+
   const users = await prisma.user.findMany({
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { name: "asc" }

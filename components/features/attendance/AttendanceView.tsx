@@ -2,7 +2,7 @@
 
 import { useUIStore } from "@/hooks/useUIStore";
 import { useState, useEffect } from "react";
-import { markAttendance, getPendingLeaves } from "@/app/actions/attendance";
+import { markAttendance, getPendingLeaves, batchApproveLeave, batchRejectLeave } from "@/app/actions/attendance";
 import { submitBreakRequest, getActiveBreak, getBreakRequests, approveBreakRequest, rejectBreakRequest } from "@/app/actions/breaks";
 import { Clock, Coffee, Heart, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -94,7 +94,7 @@ export function AttendanceView({
   };
 
   useEffect(() => {
-    if (role === "admin" || role === "super_admin") {
+    if (role === "admin" || role === "super_admin" || permissions.split(",").map((p) => p.trim()).includes("manage_attendance")) {
       fetchRecordsForDate(selectedDate);
     }
   }, [selectedDate]);
@@ -320,15 +320,20 @@ export function AttendanceView({
     }
   };
 
-  const handleApproveLeave = async (email: string, date: string) => {
-    if (!confirm(`Approve leave request for ${email.split("@")[0]} on ${date}?`)) return;
-    const res = await markAttendance(email, "Leave", date);
+  const handleApproveLeave = async (email: string, dates: string[], name: string) => {
+    const dayText = dates.length === 1 ? `on ${dates[0]}` : `for ${dates.length} days (${dates[0]} to ${dates[dates.length - 1]})`;
+    if (!confirm(`Approve leave request for ${name} ${dayText}?`)) return;
+    const res = dates.length === 1
+      ? await markAttendance(email, "Leave", dates[0], undefined, undefined, currentUserEmail)
+      : await batchApproveLeave(email, dates, currentUserEmail);
     if (res.success) {
-      addToast(`Leave approved for ${email.split("@")[0]}`, "success");
+      addToast(`Leave approved for ${name} ${dayText} ✓`, "success");
       setRecords((prev) =>
-        prev.map((r) => (r.email === email && r.date === date ? { ...r, status: "Leave" } : r))
+        prev.map((r) =>
+          r.email === email && dates.includes(r.date || "") ? { ...r, status: "Leave" } : r
+        )
       );
-      if (date === selectedDateISO) {
+      if (dates.includes(selectedDateISO)) {
         setSelectedDateRecords((prev) =>
           prev.map((r) => (r.email === email ? { ...r, status: "leave", checkIn: "—" } : r))
         );
@@ -342,15 +347,20 @@ export function AttendanceView({
     }
   };
 
-  const handleRejectLeave = async (email: string, date: string) => {
-    if (!confirm(`Reject leave request for ${email.split("@")[0]} on ${date}?`)) return;
-    const res = await markAttendance(email, "Absent", date);
+  const handleRejectLeave = async (email: string, dates: string[], name: string) => {
+    const dayText = dates.length === 1 ? `on ${dates[0]}` : `for ${dates.length} days (${dates[0]} to ${dates[dates.length - 1]})`;
+    if (!confirm(`Reject leave request for ${name} ${dayText}?`)) return;
+    const res = dates.length === 1
+      ? await markAttendance(email, "Absent", dates[0])
+      : await batchRejectLeave(email, dates);
     if (res.success) {
-      addToast(`Leave rejected (marked Absent) for ${email.split("@")[0]}`, "success");
+      addToast(`Leave rejected for ${name} ${dayText}`, "success");
       setRecords((prev) =>
-        prev.map((r) => (r.email === email && r.date === date ? { ...r, status: "Absent" } : r))
+        prev.map((r) =>
+          r.email === email && dates.includes(r.date || "") ? { ...r, status: "Absent" } : r
+        )
       );
-      if (date === selectedDateISO) {
+      if (dates.includes(selectedDateISO)) {
         setSelectedDateRecords((prev) =>
           prev.map((r) => (r.email === email ? { ...r, status: "absent", checkIn: "—" } : r))
         );
@@ -710,7 +720,7 @@ export function AttendanceView({
                                         type="button"
                                         className="action-btn action-approve"
                                         style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "2px" }}
-                                        onClick={() => handleApproveLeave(email, selectedDateISO)}
+                                        onClick={() => handleApproveLeave(email, [selectedDateISO], rec.name)}
                                       >
                                         🏖 Approve
                                       </button>
@@ -718,7 +728,7 @@ export function AttendanceView({
                                         type="button"
                                         className="action-btn action-reject"
                                         style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "4px" }}
-                                        onClick={() => handleRejectLeave(email, selectedDateISO)}
+                                        onClick={() => handleRejectLeave(email, [selectedDateISO], rec.name)}
                                       >
                                         Reject
                                       </button>
@@ -857,14 +867,15 @@ export function AttendanceView({
                           <th style={{ padding: "12px 16px" }}>Employee</th>
                           <th style={{ padding: "12px 16px" }}>Type</th>
                           <th style={{ padding: "12px 16px" }}>Reason</th>
-                          <th style={{ padding: "12px 16px" }}>Requested Date</th>
+                          <th style={{ padding: "12px 16px" }}>Date(s)</th>
+                          <th style={{ padding: "12px 16px" }}>Days</th>
                           <th style={{ padding: "12px 16px" }}>Status</th>
                           <th style={{ padding: "12px 16px" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {pendingLeavesList.map((leave) => (
-                          <tr key={leave.id}>
+                        {pendingLeavesList.map((leave, idx) => (
+                          <tr key={leave.email + leave.startDate}>
                             <td style={{ padding: "12px 16px" }}>
                               <strong>{leave.name}</strong>
                               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{leave.email}</div>
@@ -872,11 +883,17 @@ export function AttendanceView({
                             <td style={{ padding: "12px 16px" }}>
                               <span style={{ fontSize: "12.5px", fontWeight: 600 }}>{leave.leaveType || "Casual Leave"}</span>
                             </td>
-                            <td style={{ padding: "12px 16px", maxWidth: "250px", wordBreak: "break-word" }}>
+                            <td style={{ padding: "12px 16px", maxWidth: "200px", wordBreak: "break-word" }}>
                               <span style={{ fontSize: "12px", color: "var(--text-soft)" }}>{leave.leaveReason || "—"}</span>
                             </td>
                             <td style={{ padding: "12px 16px" }}>
-                              <strong>{new Date(leave.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                              <strong>{new Date(leave.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</strong>
+                              {leave.dayCount > 1 && (
+                                <> – <strong>{new Date(leave.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</strong></>
+                              )}
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{ fontSize: "13px", fontWeight: 700 }}>{leave.dayCount}</span>
                             </td>
                             <td style={{ padding: "12px 16px" }}>
                               <span className="badge badge-amber">Pending Leave</span>
@@ -884,18 +901,18 @@ export function AttendanceView({
                             <td style={{ padding: "12px 16px" }}>
                               <div style={{ display: "flex", gap: "6px" }}>
                                 <button
-                                  onClick={() => handleApproveLeave(leave.email, leave.date)}
+                                  onClick={() => handleApproveLeave(leave.email, leave.dates, leave.name)}
                                   className="action-btn action-approve"
                                   style={{ padding: "4px 10px", fontSize: "11px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "2px" }}
                                 >
-                                  🏖 Approve
+                                  🏖 Approve All
                                 </button>
                                 <button
-                                  onClick={() => handleRejectLeave(leave.email, leave.date)}
+                                  onClick={() => handleRejectLeave(leave.email, leave.dates, leave.name)}
                                   className="action-btn action-reject"
                                   style={{ padding: "4px 10px", fontSize: "11px", borderRadius: "4px" }}
                                 >
-                                  Reject
+                                  Reject All
                                 </button>
                               </div>
                             </td>

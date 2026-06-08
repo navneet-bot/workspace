@@ -21,6 +21,7 @@ interface CalendarEvent {
 export function CalendarView({ events }: { events: CalendarEvent[] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -91,9 +92,9 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const dayEvents = eventsMap[dateStr] || [];
 
-      const dots = dayEvents.slice(0, 3).map((e, idx) => (
-        <div key={idx} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: e.color }} />
-      ));
+      const maxPills = 2;
+      const visiblePills = dayEvents.slice(0, maxPills);
+      const extraCount = dayEvents.length - maxPills;
 
       cells.push(
         <div
@@ -111,9 +112,8 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
           >
             {d}
           </div>
-          <div className="cal-event-dots flex gap-[2px] flex-wrap mt-[2px]">{dots}</div>
-          <div className="cal-event-pills mt-[2px] flex flex-col gap-0.5 overflow-hidden w-full min-w-0">
-            {dayEvents.map((e, idx) => (
+          <div className="cal-event-pills mt-[2px] flex flex-col gap-0.5 w-full min-w-0" style={{ maxHeight: "44px", overflow: "hidden" }}>
+            {visiblePills.map((e, idx) => (
               <div
                 key={idx}
                 className="cal-event-pill truncate rounded-[4px] px-1 py-0.5 text-[9.5px] font-medium"
@@ -122,6 +122,11 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
                 {e.label}
               </div>
             ))}
+            {extraCount > 0 && (
+              <div className="text-[10px] font-bold text-jj-text-muted text-center leading-tight">
+                +{extraCount} more
+              </div>
+            )}
           </div>
         </div>
       );
@@ -212,9 +217,10 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
                       const emoji = e.label.slice(0, 2);
                       const text = e.label.slice(2).trim();
                       return (
-                        <div
+                        <button
                           key={idx}
-                          className="flex items-center rounded-r-[6px] border-l-[3px] pl-1 pr-2 py-1.5"
+                          onClick={() => setSelectedEvent(e)}
+                          className="flex items-center rounded-r-[6px] border-l-[3px] pl-1 pr-2 py-1.5 w-full text-left cursor-pointer transition-opacity hover:opacity-80"
                           style={{
                             backgroundColor: `${e.color}10`,
                             borderLeftColor: e.color,
@@ -229,7 +235,7 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
                           >
                             {text}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -358,9 +364,118 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
                         )}
                       </div>
                     )}
+                    {e.type === "leave" && e.extra && (
+                      <div className="text-[11.5px] text-jj-text-muted pl-[28px] flex flex-col gap-1 border-t border-jj-border border-opacity-10 pt-2 mt-1">
+                        {e.extra.descriptionText && (
+                          <div>
+                            📂 <span className="text-jj-text-soft">{e.extra.descriptionText}</span>
+                          </div>
+                        )}
+                        {e.extra.description && (
+                          <div>
+                            💬 Reason: <span className="text-jj-text-soft">{e.extra.description}</span>
+                          </div>
+                        )}
+                        {e.extra.created_by && (
+                          <div>
+                            ✅ Approved by{" "}
+                            <strong className="text-jj-text">{e.extra.time || e.extra.created_by.split("@")[0]}</strong>
+                          </div>
+                        )}
+                        {!e.extra.created_by && (
+                          <div>
+                            <span className="text-jj-text-muted">Approval details not recorded</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Event Detail Popup */}
+      {selectedEvent && (
+        <div
+          onClick={() => setSelectedEvent(null)}
+          className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-[1px]"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-jj-surface border border-jj-border rounded-[24px] w-[90vw] max-w-[380px] shadow-[0_20_60_rgba(0,0,0,0.4)] flex flex-col overflow-hidden box-border"
+            style={{ padding: "20px" }}
+          >
+            <div className="flex justify-between items-center shrink-0" style={{ marginBottom: "16px" }}>
+              <div className="text-[14px] md:text-[15px] font-bold text-jj-text">
+                {new Date(selectedEvent.dateStr + "T00:00:00").toLocaleDateString("en-IN", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEvent(null)}
+                className="w-8 h-8 flex items-center justify-center bg-none border-none text-jj-text-muted hover:text-jj-text cursor-pointer transition-colors relative shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {(() => {
+                const firstSpaceIndex = selectedEvent.label.indexOf(" ");
+                const icon = firstSpaceIndex !== -1 ? selectedEvent.label.substring(0, firstSpaceIndex) : "";
+                const text = firstSpaceIndex !== -1 ? selectedEvent.label.substring(firstSpaceIndex + 1) : selectedEvent.label;
+                const e = selectedEvent;
+                return (
+                  <div
+                    className="border border-opacity-30 w-full box-border flex flex-col justify-center shrink-0"
+                    style={{
+                      backgroundColor: `${e.color}15`,
+                      borderColor: `${e.color}30`,
+                      padding: "12px 16px",
+                      borderRadius: "14px",
+                      gap: "8px"
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5 w-full">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }}></div>
+                      {icon && <span className="text-[15px] flex-shrink-0">{icon}</span>}
+                      <div className="text-[13px] font-semibold truncate flex-1" style={{ color: e.color }}>
+                        {text}
+                      </div>
+                    </div>
+                    {e.type === "meeting" && e.extra && (
+                      <div className="text-[11.5px] text-jj-text-muted pl-[28px] flex flex-col gap-1 border-t border-jj-border border-opacity-10 pt-2 mt-1">
+                        {e.extra.description && <div>📝 <span className="text-jj-text-soft">{e.extra.description}</span></div>}
+                        {e.extra.created_by && <div>👤 Created by <strong className="text-jj-text">{e.extra.created_by.split("@")[0]}</strong></div>}
+                        {e.extra.time && e.extra.time !== "TBD" && <div>🕐 {e.extra.time}</div>}
+                        {e.extra.link && (
+                          <div className="mt-1">
+                            <a href={e.extra.link} target="_blank" rel="noopener noreferrer" className="text-jj-accent hover:underline font-semibold">🔗 Join Meeting</a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {e.type === "leave" && e.extra && (
+                      <div className="text-[11.5px] text-jj-text-muted pl-[28px] flex flex-col gap-1 border-t border-jj-border border-opacity-10 pt-2 mt-1">
+                        {e.extra.descriptionText && <div>📂 <span className="text-jj-text-soft">{e.extra.descriptionText}</span></div>}
+                        {e.extra.description && <div>💬 Reason: <span className="text-jj-text-soft">{e.extra.description}</span></div>}
+                        {e.extra.created_by ? (
+                          <div>✅ Approved by <strong className="text-jj-text">{e.extra.time || e.extra.created_by.split("@")[0]}</strong></div>
+                        ) : (
+                          <div><span className="text-jj-text-muted">Approval details not recorded</span></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

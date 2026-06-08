@@ -89,7 +89,7 @@ function getNavSections(role: string, permissions: string): NavSection[] {
     if (role === "super_admin" || role === "tutor") {
       manageItems.push({ id: "candidates", name: "Candidates", href: "/dashboard/candidates", icon: Users });
     }
-    if ((role === "super_admin" || role === "tutor" || hasPerm("manage_attendance")) && role !== "intern") {
+    if (role === "super_admin" || hasPerm("manage_attendance")) {
       manageItems.push({ id: "attendance", name: "Attendance", href: "/dashboard/attendance", icon: CalendarCheck });
     }
     if ((role === "super_admin" || role === "tutor" || hasPerm("view_reports")) && role !== "intern") {
