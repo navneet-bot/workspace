@@ -712,7 +712,7 @@ export function AttendanceView({
                               <td style={{ padding: "12px 16px" }}>
                                 {statusBadge(formattedStatusText)}
                               </td>
-                              {canManageAttendance && !isBeforeJoining && (
+                              {canManageAttendance && !isBeforeJoining && !isWeekendStatus && (
                                 <td style={{ padding: "8px 16px" }}>
                                   {isLeaveRequested ? (
                                     <div style={{ display: "flex", gap: "6px" }}>
